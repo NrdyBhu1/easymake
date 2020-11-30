@@ -21,6 +21,7 @@ Download the latest version from the releases tab, or build from source.
 ## Credits
 
 [undersquire](https://github.com/undersquire) - Original idea, programming, project lead
+
 [DynamicDonkey](https://github.com/DynamicDonkey) - JSON buildscript example, README, documentation
 
 ## License
