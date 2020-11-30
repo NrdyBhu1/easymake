@@ -1,0 +1,26 @@
+{
+	"project": "my_project",
+	"compiler": "gcc",
+	"output": "bin/a.out",
+
+	"includes": [
+		"some/directory/all/files/in/here/*.h",
+		"some/specific/file.h"
+	],
+
+	"libraries": [
+		"libsomething.a",
+		"libidk.so",
+		"etc.dll"
+	],
+
+	"sources": [
+		"some/src/*.c",
+		"some/src/specific.c"
+	],
+
+	"compiler_options": [
+		"-s",
+		"-O3"
+	]
+}
