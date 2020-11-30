@@ -4,8 +4,8 @@
 	"output": "bin/a.out",
 
 	"includes": [
-		"some/directory/all/files/in/here/*.h",
-		"some/specific/file.h"
+		"some/directory/with/headers",
+		"some/other/directory/with/headers"
 	],
 
 	"libraries": [

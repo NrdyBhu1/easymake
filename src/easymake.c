@@ -10,7 +10,7 @@ char *easymake_read_file(char *file_path)
   
   if(!file)
   {
-    printf("easymake: file not found!\n");
+    printf("easymake: build file not found!\n");
     return NULL;
   }
   
@@ -19,13 +19,13 @@ char *easymake_read_file(char *file_path)
   long length = ftell(file);
   rewind(file);
   
-  char *text = calloc(1, length + 1);
+  char *text = (char *)malloc(length);
   
   if(!text)
   {
     fclose(file);
     
-    printf("easymake: memory error\n");
+    printf("easymake: invalid memory error!\n");
     return NULL;
   }
   
@@ -46,60 +46,181 @@ BuildOptions easymake_build_options(char *buf)
 {
   BuildOptions boptions;
   
-  // @TODO parse build file and genereate build options
   struct json_value_s *root = json_parse(buf, strlen(buf));
   
   if(root->type == json_type_object)
   {
-    struct json_object_s *object = (struct json_object_s *)root;
+    struct json_object_s *object = (struct json_object_s *)root->payload;
     
     struct json_object_element_s *key = object->start;
     
     while(key != NULL)
     {
       struct json_string_s *str = key->name;
-      if(strcmp(str->string, "project"))
+      if(!strcmp(str->string, "project"))
       {
         struct json_value_s *val = key->value;
         
         if(val->type == json_type_string)
         {
-          struct json_string_s *strval = (struct json_string_s *)val;
+          struct json_string_s *strval = (struct json_string_s *)val->payload;
           boptions.project = strval->string;
         }
       }
-      else if(strcmp(str->string, "compiler"))
+      else if(!strcmp(str->string, "compiler"))
       {
         struct json_value_s *val = key->value;
         
         if(val->type == json_type_string)
         {
-          struct json_string_s *strval = (struct json_string_s *)val;
+          struct json_string_s *strval = (struct json_string_s *)val->payload;
           boptions.compiler = strval->string;
         }
       }
-      else if(strcmp(str->string, "output"))
+      else if(!strcmp(str->string, "output"))
       {
         struct json_value_s *val = key->value;
         
         if(val->type == json_type_string)
         {
-          struct json_string_s *strval = (struct json_string_s *)val;
+          struct json_string_s *strval = (struct json_string_s *)val->payload;
           boptions.output = strval->string;
         }
       }
-      else if(strcmp(str->string, "includes"))
+      else if(!strcmp(str->string, "sources"))
       {
         struct json_value_s *val = key->value;
         
         if(val->type == json_type_array)
         {
-          struct json_array_s *array = (struct json_array_s *)val;
+          struct json_array_s *array = (struct json_array_s *)val->payload;
+          
+          char **sources = (char **)malloc(sizeof(char *) * array->length);
+          
+          struct json_array_element_s *arrel = array->start;
+          
+          int i = 0;
+          while(arrel != NULL)
+          {
+            struct json_value_s *arrval = arrel->value;
+            
+            if(arrval->type == json_type_string)
+            {
+              struct json_string_s *arrstr = (struct json_string_s *)arrval->payload;
+              sources[i] = (char *)arrstr->string;
+            }
+            
+            if(arrel->next == NULL) break;
+            
+            i++;
+            arrel = arrel->next;
+          }
+          
+          boptions.sources = (const char **)sources;
+          boptions.sources_count = array->length;
+        }
+      }
+      else if(!strcmp(str->string, "includes"))
+      {
+        struct json_value_s *val = key->value;
+        
+        if(val->type == json_type_array)
+        {
+          struct json_array_s *array = (struct json_array_s *)val->payload;
           
           char **includes = (char **)malloc(sizeof(char *) * array->length);
           
+          struct json_array_element_s *arrel = array->start;
+          
+          int i = 0;
+          while(arrel != NULL)
+          {
+            struct json_value_s *arrval = arrel->value;
+            
+            if(arrval->type == json_type_string)
+            {
+              struct json_string_s *arrstr = (struct json_string_s *)arrval->payload;
+              includes[i] = (char *)arrstr->string;
+            }
+            
+            if(arrel->next == NULL) break;
+            
+            i++;
+            arrel = arrel->next;
+          }
+          
+          boptions.includes = (const char **)includes;
+          boptions.includes_count = array->length;
         }
       }
+      else if(!strcmp(str->string, "libraries"))
+      {
+        struct json_value_s *val = key->value;
+        
+        if(val->type == json_type_array)
+        {
+          struct json_array_s *array = (struct json_array_s *)val->payload;
+          
+          char **libraries = (char **)malloc(sizeof(char *) * array->length);
+          
+          struct json_array_element_s *arrel = array->start;
+          
+          int i = 0;
+          while(arrel != NULL)
+          {
+            struct json_value_s *arrval = arrel->value;
+            
+            if(arrval->type == json_type_string)
+            {
+              struct json_string_s *arrstr = (struct json_string_s *)arrval->payload;
+              libraries[i] = (char *)arrstr->string;
+            }
+            
+            if(arrel->next == NULL) break;
+            
+            i++;
+            arrel = arrel->next;
+          }
+          
+          boptions.libraries = (const char **)libraries;
+          boptions.libraries_count = array->length;
+        }
+      }
+      else if(!strcmp(str->string, "compiler_options"))
+      {
+        struct json_value_s *val = key->value;
+        
+        if(val->type == json_type_array)
+        {
+          struct json_array_s *array = (struct json_array_s *)val->payload;
+          
+          char **compiler_options = (char **)malloc(sizeof(char *) * array->length);
+          
+          struct json_array_element_s *arrel = array->start;
+          
+          int i = 0;
+          while(arrel != NULL)
+          {
+            struct json_value_s *arrval = arrel->value;
+            
+            if(arrval->type == json_type_string)
+            {
+              struct json_string_s *arrstr = (struct json_string_s *)arrval->payload;
+              compiler_options[i] = (char *)arrstr->string;
+            }
+            
+            if(arrel->next == NULL) break;
+            
+            i++;
+            arrel = arrel->next;
+          }
+          
+          boptions.compiler_options = (const char **)compiler_options;
+          boptions.compiler_options_count = array->length;
+        }
+      }
+      
+      key = key->next;
     }
   }
   else
@@ -113,15 +234,79 @@ BuildOptions easymake_build_options(char *buf)
 
 void easymake_build_project(BuildOptions *boptions)
 {
-  // @TODO run build process based on build options
+  printf("easymake: building project \'%s\' using compiler \'%s\'\n", boptions->project, boptions->compiler);
+  
+  char command[256];
+  char *temp = "";
+  
+  temp = concat(command, boptions->compiler);
+  strcpy(command, temp);
+  free(temp);
+  
+  temp = concat(command, " -o ");
+  strcpy(command, temp);
+  free(temp);
+  
+  temp = concat(command, boptions->output);
+  strcpy(command, temp);
+  free(temp);
+  
+  int i;
+  
+  for(i = 0; i < boptions->sources_count; i++)
+  {
+    temp = concat(command, " ");
+    strcpy(command, temp);
+    free(temp);
+    
+    temp = concat(command, (boptions->sources)[i]);
+    strcpy(command, temp);
+    free(temp);
+  }
+  
+  for(i = 0; i < boptions->includes_count; i++)
+  {
+    temp = concat(command, " -I");
+    strcpy(command, temp);
+    free(temp);
+    
+    temp = concat(command, (boptions->includes)[i]);
+    strcpy(command, temp);
+    free(temp);
+  }
+  
+  for(i = 0; i < boptions->libraries_count; i++)
+  {
+    temp = concat(command, " ");
+    strcpy(command, temp);
+    free(temp);
+    
+    temp = concat(command, (boptions->libraries)[i]);
+    strcpy(command, temp);
+    free(temp);
+  }
+  
+  for(i = 0; i < boptions->compiler_options_count; i++)
+  {
+    temp = concat(command, " ");
+    strcpy(command, temp);
+    free(temp);
+    
+    temp = concat(command, (boptions->compiler_options)[i]);
+    strcpy(command, temp);
+    free(temp);
+  }
+  
+  system(command);
+  
+  printf("easymake: build process complete. output file: \'%s\'\n", boptions->output);
 }
 
 int main(int argc, char *argv[])
 {
   if(argc > 1)
   {
-    // @TODO why isnt this string comparison working??
-    if(strcmp(argv[1], "-version"))
+    if(!strcmp(argv[1], "-version"))
     {
       printf("easymake v%.1f - by undersquire\n", VERSION);
     }
