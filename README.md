@@ -1,14 +1,14 @@
 # Easymake
 
-A much easier and stress free alternative to make or cmake.
+A simple and lightweight alternative to Make or CMake.
 
 ## Installation
 
-Download the latest version from the releases tab, or build from source.
+Download the latest version from the releases tab, or build from source (check COMPILING_EASYMAKE file).
 
 ## Usage
 
-`$ easymake build.ezmk`
+`$ easymake YOUR_BUILD_FILE`
 
 ## Contributing
 
