@@ -27,4 +27,4 @@ Download the latest version from the releases tab, or build from source.
 
 ## License
 
-[GPL v2](https://raw.githubusercontent.com/undersquire/easymake/main/LICENSE)
+[GPL v3](https://raw.githubusercontent.com/undersquire/easymake/main/LICENSE)
