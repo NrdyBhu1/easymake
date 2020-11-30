@@ -1,6 +1,6 @@
 # Easymake
 
-A simple and lightweight alternative to Make or CMake.
+A simple, lightweight and open-sourced alternative to Make or CMake.
 
 ## Installation
 
