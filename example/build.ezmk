@@ -1,0 +1,31 @@
+# NOTE: This isnt the final design for easymake syntax, this can change and please
+# suggest any improvements/features
+
+# To start off, line comments start with a # and anything after that is ignored for that
+# line
+
+# For easymake files, you do not have to have an extension for the build/easymake file
+# it can simple be build or build.anything
+
+# Here is the syntax for easymake:
+
+# This simply describes the project, you can also put a description of your project there
+project: "my_project"
+
+# This is where you specify all include files for the compiler to use
+includes: "some/directory/all/files/in/here/*.h", "some/specific/file.h"
+
+# This is how you specify libs to link against
+libraries: "libsomething.a", "libidk.so", "etc.dll"
+
+# This is where you specify source files to compile
+sources: "some/src/*.c", "some/src/specific.c"
+
+# This is how you specify which compiler to use (must be added to path!)
+compiler: "gcc"
+
+# Extra compiler options that will be passed to the compiler when building
+extra_compiler_options: "-s -O3"
+
+# Output file, can be named anything and have any extension
+output: "bin/a.out"
