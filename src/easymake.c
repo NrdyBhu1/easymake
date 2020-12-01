@@ -87,7 +87,7 @@ BuildOptions easymake_build_options(char *buf)
           continue;
         }
 
-        char **includes = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
+        char **includes = (char **)malloc(sizeof(char *) * (tokens[i + 1].size + 1));
 
         for (j = 0; j < tokens[i + 1].size; j++)
         {
@@ -112,7 +112,7 @@ BuildOptions easymake_build_options(char *buf)
           continue;
         }
 
-        char **sources = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
+        char **sources = (char **)malloc(sizeof(char *) * (tokens[i + 1].size + 1));
 
         for (j = 0; j < tokens[i + 1].size; j++)
         {
