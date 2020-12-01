@@ -170,7 +170,7 @@ void easymake_build_project(BuildOptions *boptions)
 {
   printf("easymake: building project \'%s\' using compiler \'%s\'\n", boptions->project, boptions->compiler);
   
-  char command[256];
+  char command[512] = "";
   char *temp = "";
   
   if(!boptions->compiler)
