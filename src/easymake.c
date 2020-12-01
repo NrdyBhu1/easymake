@@ -6,7 +6,7 @@ float VERSION = 0.1;
 char *easymake_read_file(char *file_path)
 {
   FILE *file;
-  file = fopen(file_path, "rb");
+  file = fopen(file_path, "r");
   
   if(!file)
   {
@@ -19,24 +19,12 @@ char *easymake_read_file(char *file_path)
   long length = ftell(file);
   rewind(file);
   
-  char *text = (char *)malloc(length);
+  char *text = (char *)malloc(length + 1);
   
-  if(!text)
-  {
-    fclose(file);
-    
-    printf("easymake: invalid memory error!\n");
-    return NULL;
-  }
+  size_t read_count = fread(text, 1, length, file);
+  text[read_count] = '\0';
   
-  if(!fread(text, length, 1, file))
-  {
-    free(text);
-    fclose(file);
-    
-    printf("easymake: failed to read build file!\n");
-    return NULL;
-  }
+  printf("%s\n", text);
   
   fclose(file);
   return text;
