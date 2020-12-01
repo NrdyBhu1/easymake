@@ -1,43 +1,9 @@
 #include "easymake.h"
 #include "jsmn.h"
+#include "utils.h"
  
 float VERSION = 0.1;
 
-char *concat(const char *a, const char *b)
-{
-  char *result = (char *)malloc(strlen(a) + strlen(b) + 1);
-  
-  strcpy(result, a);
-  strcat(result, b);
-  
-  return result;
-}
- 
-char *cstrdup(const char *s)
-{
-    size_t size = strlen(s) + 1;
-    char *p = malloc(size);
-    if (p != NULL) {
-        memcpy(p, s, size);
-    }
-    return p;
-}
- 
-char *cstrndup(const char *s, size_t n)
-{
-    char *p;
-    size_t n1;
- 
-    for (n1 = 0; n1 < n && s[n1] != '\0'; n1++)
-        continue;
-    p = malloc(n + 1);
-    if (p != NULL) {
-        memcpy(p, s, n1);
-        p[n1] = '\0';
-    }
-    return p;
-}
- 
 int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
       strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
@@ -45,7 +11,7 @@ int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   }
   return -1;
 }
- 
+
 char *easymake_read_file(char *file_path)
 {
   FILE *file;
@@ -70,17 +36,17 @@ char *easymake_read_file(char *file_path)
   fclose(file);
   return text;
 }
- 
+
 BuildOptions easymake_build_options(char *buf)
 {
   BuildOptions boptions;
- 
+
   jsmn_parser parser;
   jsmntok_t tokens[512];
   jsmn_init(&parser);
   int i;
   int r = jsmn_parse(&parser, buf, strlen(buf), tokens, sizeof(tokens) / sizeof(tokens[0]));
- 
+
   if(r > 1 && tokens[0].type == JSMN_OBJECT)
   {
     for (i = 1; i < r; i++)
@@ -89,25 +55,25 @@ BuildOptions easymake_build_options(char *buf)
       {
         printf("- Project: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
                buf + tokens[i + 1].start);
- 
+
         boptions.project = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
         i++;
       }
- 
+
       else if (jsoneq(buf, &tokens[i], "output") == 0)
       {
         printf("- Output: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
                buf + tokens[i + 1].start);
- 
+
         boptions.output = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
         i++;
       }
- 
+
       else if (jsoneq(buf, &tokens[i], "compiler") == 0)
       {
         printf("- Compiler: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
                buf + tokens[i + 1].start);
- 
+
         boptions.compiler = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
         i++;
       }
@@ -120,21 +86,23 @@ BuildOptions easymake_build_options(char *buf)
         if (tokens[i + 1].type != JSMN_ARRAY) {
           continue;
         }
- 
+
         char **includes = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
- 
+
         for (j = 0; j < tokens[i + 1].size; j++)
         {
           jsmntok_t *g = &tokens[i + j + 2];
           printf("  * %.*s\n", g->end - g->start, buf + g->start);
           includes[i] = cstrndup(buf + g->start, g->end - g->start);
         }
- 
+
         boptions.includes = (const char **)includes;
         boptions.includes_count = tokens[i + 1].size;
+
+        free(includes);
         i += tokens[i + 1].size + 1;
       }
-      
+
       else if (jsoneq(buf, &tokens[i], "sources") == 0)
       {
         int j;
@@ -143,22 +111,23 @@ BuildOptions easymake_build_options(char *buf)
         if (tokens[i + 1].type != JSMN_ARRAY) {
           continue;
         }
- 
+
         char **sources = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
- 
+
         for (j = 0; j < tokens[i + 1].size; j++)
         {
-          //printf("%d\n", j);
           jsmntok_t *g = &tokens[i + j + 2];
           printf("  * %.*s\n", g->end - g->start, buf + g->start);
           sources[i] = cstrndup(buf + g->start, g->end - g->start);
         }
- 
+
         boptions.sources = (const char **)sources;
         boptions.sources_count = tokens[i + 1].size;
+
+        free(sources);
         i += tokens[i + 1].size + 1;
       }
-      
+
       else
       {
         printf("Unexpected key: %.*s\n", tokens[i].end - tokens[i].start,
@@ -174,7 +143,7 @@ BuildOptions easymake_build_options(char *buf)
   free(buf);
   return boptions;
 }
- 
+
 void easymake_build_project(BuildOptions *boptions)
 {
   printf("easymake: building project \'%s\' using compiler \'%s\'\n", boptions->project, boptions->compiler);
@@ -262,7 +231,7 @@ void easymake_build_project(BuildOptions *boptions)
   
   printf("easymake: build process complete. output file: \'%s\'\n", boptions->output);
 }
- 
+
 int main(int argc, char *argv[])
 {
   if(argc > 1)
