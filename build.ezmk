@@ -1,7 +1,7 @@
 {
 	"project": "easymake",
 	"compiler": "gcc",
-	"output": "a.out",
+	"output": "easymake",
 
 	"includes": [
 		"include"
