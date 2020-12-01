@@ -17,7 +17,7 @@ static char *cstrndup(const char *s, size_t n)
   if(p != NULL)
   {
     memcpy(p, s, n);
-    p[n + 1] = '\0';
+    p[n] = '\0';
   }
   
   return p;  

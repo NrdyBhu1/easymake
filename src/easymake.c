@@ -53,8 +53,8 @@ BuildOptions easymake_build_options(char *buf)
     {
       if (jsoneq(buf, &tokens[i], "project") == 0)
       {
-        printf("- Project: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
-               buf + tokens[i + 1].start);
+        //printf("- Project: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
+               //buf + tokens[i + 1].start);
 
         boptions.project = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
         i++;
@@ -62,8 +62,8 @@ BuildOptions easymake_build_options(char *buf)
 
       else if (jsoneq(buf, &tokens[i], "output") == 0)
       {
-        printf("- Output: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
-               buf + tokens[i + 1].start);
+        //printf("- Output: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
+               //buf + tokens[i + 1].start);
 
         boptions.output = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
         i++;
@@ -71,8 +71,8 @@ BuildOptions easymake_build_options(char *buf)
 
       else if (jsoneq(buf, &tokens[i], "compiler") == 0)
       {
-        printf("- Compiler: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
-               buf + tokens[i + 1].start);
+        //printf("- Compiler: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
+               //buf + tokens[i + 1].start);
 
         boptions.compiler = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
         i++;
@@ -81,7 +81,7 @@ BuildOptions easymake_build_options(char *buf)
       else if (jsoneq(buf, &tokens[i], "includes") == 0)
       {
         int j;
-        printf("- Includes:\n");
+        //printf("- Includes:\n");
         
         if (tokens[i + 1].type != JSMN_ARRAY) {
           continue;
@@ -92,7 +92,7 @@ BuildOptions easymake_build_options(char *buf)
         for (j = 0; j < tokens[i + 1].size; j++)
         {
           jsmntok_t *g = &tokens[i + j + 2];
-          printf("  * %.*s\n", g->end - g->start, buf + g->start);
+          //printf("  * %.*s\n", g->end - g->start, buf + g->start);
           includes[j] = cstrndup(buf + g->start, g->end - g->start);
         }
 
@@ -105,7 +105,7 @@ BuildOptions easymake_build_options(char *buf)
       else if (jsoneq(buf, &tokens[i], "sources") == 0)
       {
         int j;
-        printf("- Sources:\n");
+        //printf("- Sources:\n");
         
         if (tokens[i + 1].type != JSMN_ARRAY) {
           continue;
@@ -116,12 +116,36 @@ BuildOptions easymake_build_options(char *buf)
         for (j = 0; j < tokens[i + 1].size; j++)
         {
           jsmntok_t *g = &tokens[i + j + 2];
-          printf("  * %.*s\n", g->end - g->start, buf + g->start);
+          //printf("  * %.*s\n", g->end - g->start, buf + g->start);
           sources[j] = cstrndup(buf + g->start, g->end - g->start);
         }
 
         boptions.sources = (const char **)sources;
         boptions.sources_count = tokens[i + 1].size;
+        
+        i += tokens[i + 1].size + 1;
+      }
+      
+      else if (jsoneq(buf, &tokens[i], "compiler_options") == 0)
+      {
+        int j;
+        //printf("- Compiler Options:\n");
+        
+        if (tokens[i + 1].type != JSMN_ARRAY) {
+          continue;
+        }
+
+        char **compiler_options = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
+
+        for (j = 0; j < tokens[i + 1].size; j++)
+        {
+          jsmntok_t *g = &tokens[i + j + 2];
+          //printf("  * %.*s\n", g->end - g->start, buf + g->start);
+          compiler_options[j] = cstrndup(buf + g->start, g->end - g->start);
+        }
+
+        boptions.compiler_options = (const char **)compiler_options;
+        boptions.compiler_options_count = tokens[i + 1].size;
         
         i += tokens[i + 1].size + 1;
       }
@@ -234,9 +258,13 @@ int main(int argc, char *argv[])
 {
   if(argc > 1)
   {
-    if(!strcmp(argv[1], "-version"))
+    if(!strcmp(argv[1], "-v") || !strcmp(argv[1], "--version"))
     {
-      printf("easymake v%.1f - by undersquire\n", VERSION);
+      printf("easymake v%.1f - made by the easymake team (all contributors on github)\n", VERSION);
+    }
+    else if(!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))
+    {
+      printf("easymake v%.1f - usage\n * --help     |  shows this page\n * --version  |  shows the easymake version", VERSION);
     }
     else
     {
@@ -245,7 +273,7 @@ int main(int argc, char *argv[])
       if(!buf) return 0;
       
       BuildOptions boptions = easymake_build_options(buf);
-     // easymake_build_project(&boptions);
+      easymake_build_project(&boptions);
     }
   }
   else
@@ -255,7 +283,7 @@ int main(int argc, char *argv[])
     if(!buf) return 0;
     
     BuildOptions boptions = easymake_build_options(buf);
-    //easymake_build_project(&boptions);
+    easymake_build_project(&boptions);
   }
   
   return 0;
