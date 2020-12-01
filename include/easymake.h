@@ -16,15 +16,4 @@ char *easymake_read_file(char *file);
 BuildOptions easymake_build_options(char *buf);
 void easymake_build_project(BuildOptions *build_options);
 
-//concat util
-static char *concat(const char *a, const char *b)
-{
-  char *result = (char *)malloc(strlen(a) + strlen(b) + 1);
-  
-  strcpy(result, a);
-  strcat(result, b);
-  
-  return result;
-}
-
 #endif
