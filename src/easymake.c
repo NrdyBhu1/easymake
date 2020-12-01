@@ -87,7 +87,7 @@ BuildOptions easymake_build_options(char *buf)
           continue;
         }
 
-        char **includes = (char **)malloc(sizeof(char *) * (tokens[i + 1].size + 1));
+        char **includes = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
 
         for (j = 0; j < tokens[i + 1].size; j++)
         {
@@ -98,8 +98,7 @@ BuildOptions easymake_build_options(char *buf)
 
         boptions.includes = (const char **)includes;
         boptions.includes_count = tokens[i + 1].size;
-
-        free(includes);
+        
         i += tokens[i + 1].size + 1;
       }
 
@@ -112,7 +111,7 @@ BuildOptions easymake_build_options(char *buf)
           continue;
         }
 
-        char **sources = (char **)malloc(sizeof(char *) * (tokens[i + 1].size + 1));
+        char **sources = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
 
         for (j = 0; j < tokens[i + 1].size; j++)
         {
@@ -123,8 +122,7 @@ BuildOptions easymake_build_options(char *buf)
 
         boptions.sources = (const char **)sources;
         boptions.sources_count = tokens[i + 1].size;
-
-        free(sources);
+        
         i += tokens[i + 1].size + 1;
       }
 
