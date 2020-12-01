@@ -1,4 +1,4 @@
-# Easymake
+# easymake
 
 A simple, lightweight and open-sourced alternative to Make or CMake.
 
