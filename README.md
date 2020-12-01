@@ -22,8 +22,9 @@ Download the latest version from the releases tab, or build from source (check C
 
 [undersquire](https://github.com/undersquire) - Original idea, programming, project lead
 
-
 [DynamicDonkey](https://github.com/DynamicDonkey) - JSON buildscript example, README, documentation
+
+[MousieDev](https://github.com/MousieDev) - JSON parsing, Bug squasher
 
 ## License
 
