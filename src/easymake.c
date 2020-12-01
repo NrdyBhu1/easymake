@@ -93,7 +93,7 @@ BuildOptions easymake_build_options(char *buf)
         {
           jsmntok_t *g = &tokens[i + j + 2];
           printf("  * %.*s\n", g->end - g->start, buf + g->start);
-          includes[i] = cstrndup(buf + g->start, g->end - g->start);
+          includes[j] = cstrndup(buf + g->start, g->end - g->start);
         }
 
         boptions.includes = (const char **)includes;
@@ -117,7 +117,7 @@ BuildOptions easymake_build_options(char *buf)
         {
           jsmntok_t *g = &tokens[i + j + 2];
           printf("  * %.*s\n", g->end - g->start, buf + g->start);
-          sources[i] = cstrndup(buf + g->start, g->end - g->start);
+          sources[j] = cstrndup(buf + g->start, g->end - g->start);
         }
 
         boptions.sources = (const char **)sources;
