@@ -24,8 +24,6 @@ char *easymake_read_file(char *file_path)
   size_t read_count = fread(text, 1, length, file);
   text[read_count] = '\0';
   
-  printf("%s\n", text);
-  
   fclose(file);
   return text;
 }
@@ -45,6 +43,7 @@ BuildOptions easymake_build_options(char *buf)
     while(key != NULL)
     {
       struct json_string_s *str = key->name;
+      
       if(!strcmp(str->string, "project"))
       {
         struct json_value_s *val = key->value;
@@ -227,20 +226,30 @@ void easymake_build_project(BuildOptions *boptions)
   char command[256];
   char *temp = "";
   
+  if(!boptions->compiler)
+  {
+    printf("easymake: no compiler specified!\n");
+    return;
+  }
+  
   temp = concat(command, boptions->compiler);
   strcpy(command, temp);
   free(temp);
   
-  temp = concat(command, " -o ");
-  strcpy(command, temp);
-  free(temp);
-  
-  temp = concat(command, boptions->output);
-  strcpy(command, temp);
-  free(temp);
+  if(boptions->output)
+  {
+    temp = concat(command, " -o ");
+    strcpy(command, temp);
+    free(temp);
+    
+    temp = concat(command, boptions->output);
+    strcpy(command, temp);
+    free(temp);
+  }
   
   int i;
   
+  if(boptions->sources)
   for(i = 0; i < boptions->sources_count; i++)
   {
     temp = concat(command, " ");
@@ -251,7 +260,13 @@ void easymake_build_project(BuildOptions *boptions)
     strcpy(command, temp);
     free(temp);
   }
+  else
+  {
+    printf("easymake: no source files specified!\n");
+    return;
+  }
   
+  if(boptions->includes)
   for(i = 0; i < boptions->includes_count; i++)
   {
     temp = concat(command, " -I");
@@ -263,6 +278,7 @@ void easymake_build_project(BuildOptions *boptions)
     free(temp);
   }
   
+  if(boptions->libraries)
   for(i = 0; i < boptions->libraries_count; i++)
   {
     temp = concat(command, " ");
@@ -274,6 +290,7 @@ void easymake_build_project(BuildOptions *boptions)
     free(temp);
   }
   
+  if(boptions->compiler_options)
   for(i = 0; i < boptions->compiler_options_count; i++)
   {
     temp = concat(command, " ");
