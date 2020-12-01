@@ -302,6 +302,10 @@ void easymake_build_project(BuildOptions *boptions)
     free(temp);
   }
   
+  #if defined(__linux__)
+    system("bash");
+  #endif
+  
   system(command);
   
   printf("easymake: build process complete. output file: \'%s\'\n", boptions->output);
