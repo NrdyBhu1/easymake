@@ -9,3 +9,6 @@ gcc:
 
 clang:
   clang src/easymake.c -Iinclude -O3 -o easymake
+
+MSVC:
+  cl src/easymake.c /I include /O2
