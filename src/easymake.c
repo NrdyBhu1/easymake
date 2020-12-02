@@ -59,10 +59,6 @@ Package easymake_build_options(char *buf)
   {
     for (i = 1; i < r; i++)
     {
-      char *ptok = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
-      printf("%s\n", ptok);
-      free(ptok);
-      
       if (jsoneq(buf, &tokens[i], "targets") == 0)
       {
         if (tokens[i + 1].type != JSMN_ARRAY) {
@@ -73,26 +69,20 @@ Package easymake_build_options(char *buf)
         free(targets);
         targets = (BuildTarget **)malloc(sizeof(BuildTarget *) * tokens[i + 1].size);
         targets[0] = current_target;
-        i++;
-      }
-      
-      else if (jsoneq(buf, &tokens[i], "target") == 0)
-      {
-        current_target->target = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
-        i++;
-      }
-      
-      else if (jsoneq(buf, &tokens[i], "{") == 0)
-      {
-        current_target = (BuildTarget *)malloc(sizeof(BuildTarget));
-      }
-      
-      else if (jsoneq(buf, &tokens[i], "}") == 0)
-      {
-        targets[package.targets_count] = current_target;
-        package.targets_count++;
         
-        current_target = targets[0];
+        int j;
+        for (j = 0; j < tokens[i + 1].size; j++)
+        {
+          jsmntok_t *g = &tokens[i + j + 2];
+          char *target_name = cstrndup(buf + g->start, g->end - g->start);
+          
+          BuildTarget *new_target = (BuildTarget *)malloc(sizeof(BuildTarget));
+          
+          //do another loop here and parse the tokens of this object using the same
+          //parsing code outside of the "targets" jsoneq
+        }
+
+        i += tokens[i + 1].size + 1;
       }
       
       else if (jsoneq(buf, &tokens[i], "project") == 0)

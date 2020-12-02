@@ -6,8 +6,7 @@
 	"sources": ["src/easymake.c"],
 	"compiler_options": ["-s","-O3"],
 	"targets": [
-	  {
-	    "target": "debug",
+	  "debug": {
 	    "compiler": "cl"
 	  }
 	]
