@@ -46,8 +46,6 @@ Package easymake_build_options(char *buf)
   BuildTarget *current_target = (BuildTarget *)malloc(sizeof(BuildTarget));
   
   current_target->target = "default";
-  
-  targets[0] = current_target;
 
   jsmn_parser parser;
   jsmntok_t tokens[512];
@@ -207,6 +205,8 @@ Package easymake_build_options(char *buf)
     printf("easymake: invalid json!\n");
   }
   
+  
+  targets[0] = current_target;
   package.targets = targets;
 
   free(buf);
