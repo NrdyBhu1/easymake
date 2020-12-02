@@ -59,6 +59,10 @@ Package easymake_build_options(char *buf)
   {
     for (i = 1; i < r; i++)
     {
+      char *ptok = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
+      printf("%s\n", ptok);
+      free(ptok);
+      
       if (jsoneq(buf, &tokens[i], "targets") == 0)
       {
         if (tokens[i + 1].type != JSMN_ARRAY) {
@@ -66,21 +70,24 @@ Package easymake_build_options(char *buf)
           continue;
         }
         
-        targets = (BuildTarget **)realloc(targets, sizeof(BuildTarget *) * tokens[i + 1].size);
+        free(targets);
+        targets = (BuildTarget **)malloc(sizeof(BuildTarget *) * tokens[i + 1].size);
+        targets[0] = current_target;
+        i++;
       }
       
-      else if (jsoneq(buf, &tokens[i], "target"))
+      else if (jsoneq(buf, &tokens[i], "target") == 0)
       {
         current_target->target = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
         i++;
       }
       
-      else if (jsoneq(buf, &tokens[i], "{"))
+      else if (jsoneq(buf, &tokens[i], "{") == 0)
       {
         current_target = (BuildTarget *)malloc(sizeof(BuildTarget));
       }
       
-      else if (jsoneq(buf, &tokens[i], "}"))
+      else if (jsoneq(buf, &tokens[i], "}") == 0)
       {
         targets[package.targets_count] = current_target;
         package.targets_count++;
@@ -125,6 +132,29 @@ Package easymake_build_options(char *buf)
 
         current_target->boptions.includes = (const char **)includes;
         current_target->boptions.includes_count = tokens[i + 1].size;
+
+        i += tokens[i + 1].size + 1;
+      }
+      
+      else if (jsoneq(buf, &tokens[i], "libraries") == 0)
+      {
+        int j;
+
+        if (tokens[i + 1].type != JSMN_ARRAY) {
+          printf("easymake: libraries must be a group\n");
+          continue;
+        }
+
+        char **libraries = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
+
+        for (j = 0; j < tokens[i + 1].size; j++)
+        {
+          jsmntok_t *g = &tokens[i + j + 2];
+          libraries[j] = cstrndup(buf + g->start, g->end - g->start);
+        }
+
+        current_target->boptions.libraries = (const char **)libraries;
+        current_target->boptions.libraries_count = tokens[i + 1].size;
 
         i += tokens[i + 1].size + 1;
       }
@@ -205,10 +235,9 @@ void easymake_build_project(Package *package, char *target_name)
     for(i = 0; i < package->targets_count; i++)
     {
       BuildTarget *target = package->targets[i];
-      printf("%s\n", target->target);
       if (strcmp(target->target, target_name) == 0)
       {
-        printf("easymake: building project \'%s\' using compiler \'%s\'\n", target->boptions.project, target->boptions.compiler);
+        printf("easymake: building project \'%s\' with target \'%s\'\n", target->boptions.project, target->target);
         
         char command[512] = "";
         char *temp = "";
@@ -264,6 +293,12 @@ void easymake_build_project(Package *package, char *target_name)
           strcpy(command, temp);
           free(temp);
         }
+        printf("5\n");
+        
+        if(target->boptions.libraries)
+        {
+          printf("%d\n", target->boptions.libraries_count);
+        }
       
         if(target->boptions.libraries)
         for(i = 0; i < target->boptions.libraries_count; i++)
@@ -289,8 +324,9 @@ void easymake_build_project(Package *package, char *target_name)
           free(temp);
         }
       
-        system(command);
         printf("easymake: %s\n", command);
+        system(command);
+        
         printf("easymake: build process complete. output file: \'%s\'\n", target->boptions.output);
         
         goto cleanup;
@@ -304,7 +340,6 @@ void easymake_build_project(Package *package, char *target_name)
   {
   
   }
-  
 }
 
 int main(int argc, char *argv[])

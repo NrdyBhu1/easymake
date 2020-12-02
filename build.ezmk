@@ -4,5 +4,11 @@
 	"output": "easymake",
 	"includes": ["include"],
 	"sources": ["src/easymake.c"],
-	"compiler_options": ["-s","-O3"]
+	"compiler_options": ["-s","-O3"],
+	"targets": [
+	  {
+	    "target": "debug",
+	    "compiler": "cl"
+	  }
+	]
 }
