@@ -1,6 +1,6 @@
 # easymake
 
-A simple, lightweight and open-sourced alternative to Make or CMake.
+Simple, lightweight, FOSS alternative to GNU Make or CMake
 
 ## Installation
 
