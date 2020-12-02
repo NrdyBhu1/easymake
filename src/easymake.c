@@ -84,6 +84,10 @@ BuildOptions easymake_build_options(char *buf)
         //printf("- Includes:\n");
         
         if (tokens[i + 1].type != JSMN_ARRAY) {
+          char **includes = (char **)malloc(sizeof(char *));
+          includes[0] = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
+          boptions.includes = (const char **)includes;
+          boptions.includes_count = 1;
           continue;
         }
 
@@ -108,6 +112,10 @@ BuildOptions easymake_build_options(char *buf)
         //printf("- Sources:\n");
         
         if (tokens[i + 1].type != JSMN_ARRAY) {
+          char **sources = (char **)malloc(sizeof(char *));
+          sources[0] = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
+          boptions.sources = (const char **)sources;
+          boptions.sources_count = 1;
           continue;
         }
 
@@ -132,6 +140,10 @@ BuildOptions easymake_build_options(char *buf)
         //printf("- Compiler Options:\n");
         
         if (tokens[i + 1].type != JSMN_ARRAY) {
+          char **compiler_options = (char **)malloc(sizeof(char *));
+          compiler_options[0] = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
+          boptions.compiler_options = (const char **)compiler_options;
+          boptions.compiler_options_count = 1;
           continue;
         }
 

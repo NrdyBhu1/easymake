@@ -3,13 +3,9 @@
 	"compiler": "gcc",
 	"output": "easymake",
 
-	"includes": [
-		"include"
-	],
+	"includes": "include",
 
-	"sources": [
-		"src/easymake.c"
-	],
+	"sources": "src/easymake.c",
 
 	"compiler_options": [
 		"-s",
