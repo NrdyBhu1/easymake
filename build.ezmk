@@ -2,7 +2,7 @@
 	"project": "easymake",
 	"compiler": "gcc",
 	"output": "easymake",
-	"includes": "include",
-	"sources": "src/easymake.c",
+	"includes": ["include"],
+	"sources": ["src/easymake.c"],
 	"compiler_options": ["-s","-O3"]
 }

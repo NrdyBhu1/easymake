@@ -12,8 +12,20 @@ typedef struct
   int sources_count, includes_count, libraries_count, compiler_options_count;
 } BuildOptions;
 
+typedef struct
+{
+  char *target;
+  BuildOptions boptions;
+} BuildTarget;
+
+typedef struct
+{
+  int targets_count;
+  BuildTarget **targets;
+} Package;
+
 char *easymake_read_file(char *file);
-BuildOptions easymake_build_options(char *buf);
-void easymake_build_project(BuildOptions *build_options);
+Package easymake_build_options(char *buf);
+void easymake_build_project(Package *package, char *target_name);
 
 #endif
