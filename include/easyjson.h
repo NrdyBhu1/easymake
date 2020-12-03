@@ -8,8 +8,7 @@
 enum json_type { json_type_unknown, json_type_string, json_type_number, json_type_array, json_type_object };
 
 struct json_value { int type; char *key; int length; };
-struct json_string { int type; char *key; int length; char *string; };
-struct json_number { int type; char *key; int length; char *number; };
+struct json_string { int type; char *key; int length; char *value; };
 struct json_object { int type; char *key; int length; struct json_value **values; };
 
 static struct json_object *json_parse(char *buffer)
@@ -58,7 +57,8 @@ static struct json_object *json_parse(char *buffer)
         
         current[0] = malloc(sizeof(struct json_object));
         
-        current[0]->type = json_type_object;
+        if(c == '{') current[0]->type = json_type_object;
+        else if(c == '[') current[0]->type = json_type_array;
         
         current[0]->length = 0;
         ((struct json_object *)current[0])->values = NULL;
@@ -91,12 +91,55 @@ static struct json_object *json_parse(char *buffer)
       case ']':
       case '}':
       {
-        
+        if(current_count > 1 && current[1]->length > 0)
+        {
+          int l;
+          for(l = 0; l < current_count - 1; l++)
+          {
+            current[l] = current[l + 1];
+          }
+          
+          ((struct json_object *)current[1])->values = realloc(((struct json_object *)current[1])->values, sizeof(struct json_object *) * (current[1]->length - 1));
+          current[1]->length--;
+        }
         break;
       }
       case ':':
       {
-        k = 1;
+        if(i + 1 < buffer_length)
+        {
+          if(buffer[i + 1] != '{' && buffer[i + 1] != '[')
+          {
+            current = realloc(current, sizeof(struct json_value *) * (current_count + 1));
+            
+            int l;
+            for(l = current_count; l > 0; l--)
+            {
+              current[l] = current[l - 1];
+            }
+            
+            if(buffer[i + 1] == '\"' || buffer[i + 1] == "\'")
+            {
+              current[0] = malloc(sizeof(struct json_string));
+              
+              current[0]->type = json_type_string;
+              
+              current[0]->length = 0;
+              ((struct json_object *)current[0])->values = NULL;
+            }
+            
+            if(strlen(storage) > 0)
+            {
+              current[0]->key = strdup(storage);
+              
+              storage = realloc(storage, sizeof(char));
+              storage[0] = '\0';
+            }
+            
+            k = 2;
+          }
+          else k = 1;
+        }
         break;
       }
       case '\"':
