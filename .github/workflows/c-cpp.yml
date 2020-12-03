@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: make
-      run: gcc src/easymake.c -Iinclude -s -O3 -o easymake
+      run: gcc src/easymake.c -Iinclude -s -static -o easymake
     - name: Upload test build
       uses: actions/upload-artifact@v2
       with:
