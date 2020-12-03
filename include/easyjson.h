@@ -48,8 +48,6 @@ static struct json_object *json_parse(char *buffer)
       case '{':
       case '[':
       {
-        printf("start of new object\n");
-        
         current = realloc(current, sizeof(struct json_value *) * (current_count + 1));
         
         int l;
@@ -96,18 +94,38 @@ static struct json_object *json_parse(char *buffer)
         
         break;
       }
+      case ':':
+      {
+        k = 1;
+        break;
+      }
       case '\"':
       case '\'':
       {
-        printf("skip\n");
-        continue;
+        switch(k)
+        {
+          case 0:
+          {
+            continue;
+            break;
+          }
+          case 1:
+          {
+            
+            break;
+          }
+          case 2:
+          {
+            
+            break;
+          }
+        }
         break;
       }
       default:
       {
         if(c != ' ')
         {
-          printf("append\n");
           if(k == 0)
           {
             int length = strlen(storage);
@@ -115,20 +133,14 @@ static struct json_object *json_parse(char *buffer)
             
             if(mod != NULL)
             {
-              printf("length: %d\n", length);
               if(length > 0) memcpy(mod, storage, length);
               
               mod[length] = c;
               mod[length + 1] = '\0';
               
-              printf("storage: %s\n", storage);
-              printf("mod: %s\n", mod);
-              
               free(storage);
               
               storage = mod;
-              
-              printf("mod -> storage: %s\n", storage);
             }
             else
             {
@@ -150,7 +162,7 @@ static struct json_object *json_parse(char *buffer)
 
 void json_free(struct json_object *object)
 {
-  //free(object->values);
+  free(object->values);
 }
 
 #endif
