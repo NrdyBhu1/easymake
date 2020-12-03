@@ -176,6 +176,7 @@ void json_free(struct json_object *object)
     free(object->values[i]);
   }
   free(object->values);
+  free(object);
 }
 
 #endif
