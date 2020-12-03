@@ -1,4 +1,4 @@
-To compile easymake, you must do so manually using either tcc, gcc or clang.
+To compile easymake, you must do so manually using either tcc, gcc, clang or MSVC.
 Here are instructions for compiling with either of those three compilers:
 
 tcc:
