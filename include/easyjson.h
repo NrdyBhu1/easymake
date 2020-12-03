@@ -17,12 +17,12 @@ static struct json_object *json_parse(char *buffer)
   long buffer_length = strlen(buffer);
   
   int current_count = 1;
-  struct json_value **current = (struct json_value **)malloc(sizeof(struct json_value *));
+  struct json_value **current = calloc(1, sizeof(struct json_value *));
   
-  char *storage = (char *)malloc(sizeof(char) * 1);
+  char *storage = calloc(1, sizeof(char));
   storage[0] = '\0';
   
-  struct json_object *object = (struct json_object *)malloc(sizeof(struct json_object));
+  struct json_object *object = calloc(1, sizeof(struct json_object));
   
   object->type = json_type_object;
   object->key = "easyjson";
@@ -50,7 +50,7 @@ static struct json_object *json_parse(char *buffer)
       {
         printf("start of new object\n");
         
-        current = (struct json_value **)realloc(current, sizeof(struct json_value *) * (current_count + 1));
+        current = realloc(current, sizeof(struct json_value *) * (current_count + 1));
         
         int l;
         for(l = current_count; l > 0; l--)
@@ -58,7 +58,7 @@ static struct json_object *json_parse(char *buffer)
           current[l] = current[l - 1];
         }
         
-        current[0] = (struct json_value *)malloc(sizeof(struct json_object));
+        current[0] = malloc(sizeof(struct json_object));
         
         current[0]->type = json_type_object;
         
@@ -69,19 +69,19 @@ static struct json_object *json_parse(char *buffer)
         {
           current[0]->key = strdup(storage);
           
-          storage = (char *)realloc(storage, sizeof(char));
+          storage = realloc(storage, sizeof(char));
           storage[0] = '\0';
         }
         
         if(current[1]->length > 0)
         {
-          ((struct json_object *)current[1])->values = (struct json_value **)realloc(((struct json_object *)current[1])->values, sizeof(struct json_object *) * (current[1]->length + 1));
+          ((struct json_object *)current[1])->values = realloc(((struct json_object *)current[1])->values, sizeof(struct json_object *) * (current[1]->length + 1));
           ((struct json_object *)current[1])->values[current[1]->length - 1] = current[0];
           current[1]->length++;
         }
         else
         {
-          ((struct json_object *)current[1])->values = (struct json_value **)malloc(sizeof(struct json_object *));
+          ((struct json_object *)current[1])->values = calloc(1, sizeof(struct json_object *));
           ((struct json_object *)current[1])->values[current[1]->length - 1] = current[0];
           current[1]->length++;
         }
@@ -103,24 +103,30 @@ static struct json_object *json_parse(char *buffer)
       }
       default:
       {
-        printf("append\n");
         if(c != ' ')
         {
+          printf("append\n");
           if(k == 0)
           {
             int length = strlen(storage);
-            char *mod = (char *)malloc(sizeof(char) * (length + 2));
+            char *mod = calloc(length + 2, sizeof(char));
             
             if(mod != NULL)
             {
+              printf("length: %d\n", length);
               if(length > 0) memcpy(mod, storage, length);
               
               mod[length] = c;
               mod[length + 1] = '\0';
               
+              printf("storage: %s\n", storage);
+              printf("mod: %s\n", mod);
+              
               free(storage);
               
               storage = mod;
+              
+              printf("mod -> storage: %s\n", storage);
             }
             else
             {
