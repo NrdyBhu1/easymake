@@ -162,6 +162,11 @@ static struct json_object *json_parse(char *buffer)
 
 void json_free(struct json_object *object)
 {
+  int i;
+  for(i = 0; i < object->length; i++)
+  {
+    free(object->values[i]);
+  }
   free(object->values);
 }
 
