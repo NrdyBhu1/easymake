@@ -157,6 +157,11 @@ static struct json_object *json_parse(char *buffer)
     }
   }
   
+  free(storage);
+  
+  current = realloc(current, 0);
+  free(current);
+  
   return object;
 }
 
