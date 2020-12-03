@@ -1,5 +1,7 @@
 # easymake
 
+![C/C++ CI](https://github.com/undersquire/easymake/workflows/C/C++%20CI/badge.svg)
+
 Simple, lightweight, FOSS alternative to GNU Make or CMake
 
 ## Installation
