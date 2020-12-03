@@ -76,14 +76,16 @@ static struct json_object *json_parse(char *buffer)
         if(current[1]->length > 0)
         {
           ((struct json_object *)current[1])->values = realloc(((struct json_object *)current[1])->values, sizeof(struct json_object *) * (current[1]->length + 1));
-          ((struct json_object *)current[1])->values[current[1]->length - 1] = current[0];
           current[1]->length++;
+          
+          ((struct json_object *)current[1])->values[current[1]->length - 1] = current[0];
         }
         else
         {
           ((struct json_object *)current[1])->values = calloc(1, sizeof(struct json_object *));
-          ((struct json_object *)current[1])->values[current[1]->length - 1] = current[0];
           current[1]->length++;
+          
+          ((struct json_object *)current[1])->values[current[1]->length - 1] = current[0];
         }
         
         break;
