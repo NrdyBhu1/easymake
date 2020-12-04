@@ -4,6 +4,8 @@
 
 float VERSION = 0.1;
 
+int EXIT_CODE = 0;
+
 int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
       strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
@@ -198,12 +200,15 @@ Package easymake_build_options(char *buf)
       {
         printf("easymake: unexpected key: %.*s\n", tokens[i].end - tokens[i].start,
                buf + tokens[i].start);
+        
+        EXIT_CODE = 4;
       }
     }
   }
   else
   {
     printf("easymake: invalid json!\n");
+    EXIT_CODE = 3;
   }
   
   
@@ -236,6 +241,7 @@ void easymake_build_project(Package *package, char *target_name)
         if(!target->boptions.compiler)
         {
           printf("easymake: no compiler specified\n");
+          EXIT_CODE = 2;
           return;
         }
         
@@ -270,6 +276,7 @@ void easymake_build_project(Package *package, char *target_name)
         else
         {
           printf("easymake: no source files specified\n");
+          EXIT_CODE = 1;
           return;
         }
       
@@ -284,8 +291,7 @@ void easymake_build_project(Package *package, char *target_name)
           strcpy(command, temp);
           free(temp);
         }
-        printf("5\n");
-        
+                
         if(target->boptions.libraries_count > 0)
         {
           printf("%d\n", target->boptions.libraries_count);
@@ -365,5 +371,9 @@ int main(int argc, char *argv[])
     easymake_build_project(&package, "default");
   }
 
-  return 0;
+  if(EXIT_CODE != 0) {
+    printf("easymake: ERROR: NON-ZERO EXIT CODE %d\n", EXIT_CODE);
+  }
+
+  return EXIT_CODE;
 }
