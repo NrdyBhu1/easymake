@@ -313,7 +313,11 @@ void json_free(struct json_object *object)
     if(object->values[i]->type == json_type_object
       || object->values[i]->type == json_type_array) 
         json_free((struct json_object *)object->values[i]);
-    else free(object->values[i]);
+    else
+    {
+      free(object->values[i]->key);
+      free(object->values[i]);
+    }
   }
   free(object->values);
   free(object);
