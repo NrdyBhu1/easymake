@@ -118,7 +118,7 @@ static struct json_object *json_parse(char *buffer)
               current[l] = current[l - 1];
             }
             
-            if(buffer[i + 1] == '\"' || buffer[i + 1] == "\'")
+            if(buffer[i + 1] == '\"' || buffer[i + 1] == '\'')
             {
               current[0] = malloc(sizeof(struct json_string));
               
