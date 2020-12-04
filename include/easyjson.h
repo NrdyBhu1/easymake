@@ -7,9 +7,9 @@
 
 enum json_type { json_type_unknown, json_type_string, json_type_number, json_type_array, json_type_object };
 
-struct json_value { int type; char *key; int length; };
-struct json_string { int type; char *key; int length; char *value; };
-struct json_object { int type; char *key; int length; struct json_value **values; };
+typedef struct json_value { int type; char *key; int length; } json_value;
+typedef struct json_string { int type; char *key; int length; char *value; } json_string;
+typedef struct json_object { int type; char *key; int length; struct json_value **values; } json_object;
 
 static struct json_object *json_parse(char *json)
 {
@@ -58,7 +58,7 @@ static struct json_object *json_parse(char *json)
   
   current[0] = (struct json_value *)object;
   
-  int i, j = 0, k = 0, k2 = 0;
+  int i, j = 0, k2 = 0;
   for(i = 0; i < buffer_length; i++)
   {
     char c = buffer[i];
