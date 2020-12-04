@@ -1,7 +1,5 @@
 # easymake
 
-![C/C++ CI](https://github.com/undersquire/easymake/workflows/C/C++%20CI/badge.svg)   ![CodeQL](https://github.com/undersquire/easymake/workflows/CodeQL/badge.svg)
-
 Simple, lightweight, FOSS alternative to GNU Make or CMake
 
 ## Installation
