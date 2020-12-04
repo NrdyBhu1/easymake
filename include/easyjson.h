@@ -30,7 +30,7 @@ static struct json_object *json_parse(char *buffer)
   
   current[0] = (struct json_value *)object;
   
-  int i, j = 0, k = 0;
+  int i, j = 0, k = 0, k2 = 0;
   for(i = 0; i < buffer_length; i++)
   {
     char c = buffer[i];
@@ -41,6 +41,9 @@ static struct json_object *json_parse(char *buffer)
       continue;
     }
     if(c == '/') j++; else j = 0;
+    
+    /* printf("%s\n", current[0]->key); */
+    printf("%s\n", storage);
     
     switch(c)
     {
@@ -70,6 +73,10 @@ static struct json_object *json_parse(char *buffer)
           storage = realloc(storage, sizeof(char));
           storage[0] = '\0';
         }
+        else
+        {
+          current[0]->key = "";
+        }
         
         if(current[1]->length > 0)
         {
@@ -88,6 +95,10 @@ static struct json_object *json_parse(char *buffer)
         
         break;
       }
+      case ',':
+      {
+        if(k2 == 0) continue;
+      }
       case ']':
       case '}':
       {
@@ -99,16 +110,59 @@ static struct json_object *json_parse(char *buffer)
             current[l] = current[l + 1];
           }
           
-          ((struct json_object *)current[1])->values = realloc(((struct json_object *)current[1])->values, sizeof(struct json_object *) * (current[1]->length - 1));
+          current = realloc(current, sizeof(struct json_value *) * (current_count - 1));
           current[1]->length--;
         }
         break;
       }
       case ':':
       {
-        if(i + 1 < buffer_length)
+        if(k2 == 0) continue;
+        break;
+      }
+      case '\"':
+      case '\'':
+      {
+        if(k2 == 0) k2 == 1;
+        else if(k2 == 1)
         {
-          if(buffer[i + 1] != '{' && buffer[i + 1] != '[')
+          if(buffer[i + 1] != ':')
+          {
+            k2 = 0;
+            struct json_value *jval = calloc(1, sizeof(struct json_value));
+            
+            jval->type = json_type_unknown;
+            
+            if(strlen(storage) > 0)
+            {
+              jval->key = strdup(storage);
+              
+              storage = realloc(storage, sizeof(char));
+              storage[0] = '\0';
+            }
+            else
+            {
+              jval->key = "";
+            }
+            
+            jval->length = 0;
+            
+            if(current[0]->length > 0)
+            {
+              ((struct json_object *)current[0])->values = realloc(((struct json_object *)current[0])->values, sizeof(struct json_value *) * (current[0]->length + 1));
+              current[0]->length++;
+              
+              ((struct json_object *)current[0])->values[current[0]->length - 1] = jval;
+            }
+            else
+            {
+              ((struct json_object *)current[0])->values = calloc(1, sizeof(struct json_value *));
+              current[0]->length++;
+              
+              ((struct json_object *)current[0])->values[current[0]->length - 1] = jval;
+            }
+          }
+          else
           {
             current = realloc(current, sizeof(struct json_value *) * (current_count + 1));
             
@@ -118,15 +172,9 @@ static struct json_object *json_parse(char *buffer)
               current[l] = current[l - 1];
             }
             
-            if(buffer[i + 1] == '\"' || buffer[i + 1] == '\'')
-            {
-              current[0] = malloc(sizeof(struct json_string));
-              
-              current[0]->type = json_type_string;
-              
-              current[0]->length = 0;
-              ((struct json_object *)current[0])->values = NULL;
-            }
+            current[0] = calloc(1, sizeof(struct json_string));
+            
+            current[0]->type = json_type_string;
             
             if(strlen(storage) > 0)
             {
@@ -135,33 +183,58 @@ static struct json_object *json_parse(char *buffer)
               storage = realloc(storage, sizeof(char));
               storage[0] = '\0';
             }
+            else
+            {
+              current[0]->key = "";
+            }
             
-            k = 2;
+            current[0]->length = 0;
+            
+            if(current[1]->length > 0)
+            {
+              ((struct json_object *)current[1])->values = realloc(((struct json_object *)current[1])->values, sizeof(struct json_string *) * (current[1]->length + 1));
+              current[1]->length++;
+              
+              ((struct json_object *)current[1])->values[current[1]->length - 1] = current[0];
+            }
+            else
+            {
+              ((struct json_object *)current[1])->values = calloc(1, sizeof(struct json_string *));
+              current[1]->length++;
+              
+              ((struct json_object *)current[1])->values[current[1]->length - 1] = current[0];
+            }
+            
+            k2 == 3;
           }
-          else k = 1;
         }
-        break;
-      }
-      case '\"':
-      case '\'':
-      {
-        switch(k)
+        else if(k2 == 3)
         {
-          case 0:
+          k2 == 4;
+        }
+        else if(k2 == 4)
+        {
+          if(strlen(storage) > 0)
           {
-            continue;
-            break;
-          }
-          case 1:
-          {
+            ((struct json_string *)current[0])->value = strdup(storage);
             
-            break;
+            storage = realloc(storage, sizeof(char));
+            storage[0] = '\0';
           }
-          case 2:
+          
+          if(current_count > 1 && current[1]->length > 0)
           {
+            int l;
+            for(l = 0; l < current_count - 1; l++)
+            {
+              current[l] = current[l + 1];
+            }
             
-            break;
+            current = realloc(current, sizeof(struct json_value *) * (current_count - 1));
+            current[1]->length--;
           }
+          
+          k2 = 0;
         }
         break;
       }
@@ -169,7 +242,7 @@ static struct json_object *json_parse(char *buffer)
       {
         if(c != ' ')
         {
-          if(k == 0)
+          if(k2 == 1 || k2 == 3)
           {
             int length = strlen(storage);
             char *mod = calloc(length + 2, sizeof(char));
@@ -189,10 +262,6 @@ static struct json_object *json_parse(char *buffer)
             {
               printf("easyjson: malloc failure\n");
             }
-          }
-          else
-          {
-            
           }
         }
         break;
