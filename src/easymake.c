@@ -46,6 +46,7 @@ Package easymake_build_options(char *buf)
   BuildTarget *current_target = (BuildTarget *)malloc(sizeof(BuildTarget));
   
   current_target->target = "default";
+  current_target->boptions.includes_count = current_target->boptions.sources_count = current_target->boptions.libraries_count = current_target->boptions.compiler_options_count = 0;
 
   jsmn_parser parser;
   jsmntok_t tokens[512];
@@ -255,7 +256,7 @@ void easymake_build_project(Package *package, char *target_name)
       
         int i;
       
-        if(target->boptions.sources)
+        if(target->boptions.sources_count > 0)
         for(i = 0; i < target->boptions.sources_count; i++)
         {
           temp = concat(command, " ");
@@ -272,7 +273,7 @@ void easymake_build_project(Package *package, char *target_name)
           return;
         }
       
-        if(target->boptions.includes)
+        if(target->boptions.includes_count > 0)
         for(i = 0; i < target->boptions.includes_count; i++)
         {
           temp = concat(command, " -I");
@@ -285,12 +286,12 @@ void easymake_build_project(Package *package, char *target_name)
         }
         printf("5\n");
         
-        if(target->boptions.libraries)
+        if(target->boptions.libraries_count > 0)
         {
           printf("%d\n", target->boptions.libraries_count);
         }
       
-        if(target->boptions.libraries)
+        if(target->boptions.libraries_count > 0)
         for(i = 0; i < target->boptions.libraries_count; i++)
         {
           temp = concat(command, " ");
@@ -302,7 +303,7 @@ void easymake_build_project(Package *package, char *target_name)
           free(temp);
         }
       
-        if(target->boptions.compiler_options)
+        if(target->boptions.compiler_options_count > 0)
         for(i = 0; i < target->boptions.compiler_options_count; i++)
         {
           temp = concat(command, " ");
