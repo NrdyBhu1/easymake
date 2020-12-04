@@ -20,12 +20,12 @@ Download the latest version from the releases tab, or build from source (check C
 
 ## Credits
 
-[undersquire](https://github.com/undersquire) - Original idea, programming, project lead
+[undersquire](https://gitea.com/undersquire) - Original idea, programming, project lead
 
-[DynamicDonkey](https://github.com/DynamicDonkey) - JSON buildscript example, README, website design, documentation
+[DynamicDonkey](https://gitea.com/DynamicDonkey) - JSON buildscript example, README, website design, documentation
 
-[MousieDev](https://github.com/MousieDev) - JSON parsing, Bug squasher
+[MousieDev](https://gitea.com/MousieDev) - JSON parsing, Bug squasher
 
 ## License
 
-[GPL v3](https://raw.githubusercontent.com/undersquire/easymake/main/LICENSE)
+[GPL v3](https://gitea.com/undersquire/easymake/raw/branch/main/LICENSE)
