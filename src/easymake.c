@@ -3,8 +3,9 @@
 #include "utils.h"
 
 float VERSION = 0.1;
-
 int EXIT_CODE = 0;
+
+bool EXIT_AFTER_PREP_BLDOPTS = false;
 
 char *easymake_read_file(char *file_path)
 {
@@ -41,23 +42,25 @@ Package easymake_build_options(char *buf)
   {
     printf("easymake: invalid buildfile\n");
     EXIT_CODE = 6;
-    return NULL;
+    EXIT_AFTER_PREP_BLDOPTS = true;
+    return package;
   }
 
   json_object *object = (json_object *)json->values[0];
 
   int i;
   for(i = 0; i < object->length; i++)
-  {
-
-  }
+  {}
 
   json_free(object);
 }
 
 void easymake_build_project(Package *package, char *target_name)
 {
-  if (!strcmp(target_name, "all"))
+  if(EXIT_AFTER_PREP_BLDOPTS)
+      return;
+
+  else if (!strcmp(target_name, "all"))
   {
     goto cleanup;
   }

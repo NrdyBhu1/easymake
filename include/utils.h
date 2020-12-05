@@ -1,6 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+typedef enum { true, false } bool;
+
 static char *concat(const char *a, const char *b)
 {
   char *result = (char *)malloc(strlen(a) + strlen(b) + 1);
