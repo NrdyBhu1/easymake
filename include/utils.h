@@ -4,10 +4,10 @@
 static char *concat(const char *a, const char *b)
 {
   char *result = (char *)malloc(strlen(a) + strlen(b) + 1);
-  
+
   strcpy(result, a);
   strcat(result, b);
-  
+
   return result;
 }
 
@@ -19,8 +19,8 @@ static char *cstrndup(const char *s, size_t n)
     memcpy(p, s, n);
     p[n] = '\0';
   }
-  
-  return p;  
+
+  return p;
 }
 
 #endif
