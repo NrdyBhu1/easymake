@@ -1,5 +1,7 @@
 # easymake
 
+# THIS IS THE DEV BRANCH - FOR STABLE CODE, PLEASE CHECKOUT MAIN
+
 Simple, lightweight, FOSS alternative to GNU Make or CMake
 
 ## Installation
