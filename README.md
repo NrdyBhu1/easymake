@@ -29,6 +29,3 @@ Download the latest version from the releases tab, or build from source (check C
 ## License
 
 [GPL v3](https://gitea.com/undersquire/easymake/raw/branch/main/LICENSE)
-
-
-test
