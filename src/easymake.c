@@ -41,7 +41,7 @@ Package easymake_build_options(char *buf)
   {
     printf("easymake: invalid buildfile\n");
     EXIT_CODE = 6;
-    //return NULL;
+    return NULL;
   }
   
   json_object *object = (json_object *)json->values[0];
