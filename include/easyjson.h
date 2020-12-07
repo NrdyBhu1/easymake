@@ -22,7 +22,7 @@ static struct json_object *json_parse(char *json)
   {
     char c = json[b];
     
-    if(c != ' ')
+    if(c != ' ' && c != '\n')
     {
       int length = strlen(buffer);
       char *mod = calloc(length + 2, sizeof(char));
