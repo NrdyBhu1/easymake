@@ -3,7 +3,7 @@
 
 typedef enum { true, false } bool;
 
-static char *concat(const char *a, const char *b)
+static char *concat(char *a, char *b)
 {
   char *result = (char *)malloc(strlen(a) + strlen(b) + 1);
 
@@ -13,7 +13,7 @@ static char *concat(const char *a, const char *b)
   return result;
 }
 
-static char *cstrndup(const char *s, size_t n)
+static char *cstrndup(char *s, size_t n)
 {
   char *p = malloc(n + 1);
   if(p != NULL)

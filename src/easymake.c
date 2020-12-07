@@ -1,4 +1,5 @@
 #include "easymake.h"
+#include "easylib.h"
 #include "easyjson.h"
 #include "utils.h"
 
@@ -32,286 +33,228 @@ char *easymake_read_file(char *file_path)
   return text;
 }
 
-Package easymake_build_options(char *buf)
+void apply_build_options(BuildOptions *boptions, json_object *object)
 {
-  Package package;
+  int i;
+  for(i = 0; i < object->length; i++)
+  {
+    json_value *val = object->values[i];
+    
+    if(strcmp(val->key, "project"))
+    {
+      if(val->type == json_type_string)
+      {
+        json_string *str = (json_string *)val;
+        boptions->project = strdup(str->value);
+      }
+    }
+    else if(strcmp(val->key, "compiler"))
+    {
+      if(val->type == json_type_string)
+      {
+        json_string *str = (json_string *)val;
+        boptions->compiler = strdup(str->value);
+      }
+    }
+    else if(strcmp(val->key, "output"))
+    {
+      if(val->type == json_type_string)
+      {
+        json_string *str = (json_string *)val;
+        boptions->output = strdup(str->value);
+      }
+    }
+    else if(strcmp(val->key, "sources"))
+    {
+      if(val->type == json_type_array)
+      {
+        json_object *arr = (json_object *)val;
+        
+        boptions->sources = malloc(sizeof(char *) * arr->length);
+        
+        int i;
+        for(i = 0; i < arr->length; i++) 
+        {
+          boptions->sources[i] = strdup(arr->values[i]->key);
+        }
+        
+        boptions->sources_count = arr->length;
+      }
+    }
+    else if(strcmp(val->key, "includes"))
+    {
+      if(val->type == json_type_array)
+      {
+        json_object *arr = (json_object *)val;
+        
+        boptions->includes = malloc(sizeof(char *) * arr->length);
+        
+        int i;
+        for(i = 0; i < arr->length; i++) 
+        {
+          boptions->includes[i] = strdup(arr->values[i]->key);
+        }
+        
+        boptions->includes_count = arr->length;
+      }
+    }
+    else if(strcmp(val->key, "libraries"))
+    {
+      if(val->type == json_type_array)
+      {
+        json_object *arr = (json_object *)val;
+        
+        boptions->libraries = malloc(sizeof(char *) * arr->length);
+        
+        int i;
+        for(i = 0; i < arr->length; i++) 
+        {
+          boptions->libraries[i] = strdup(arr->values[i]->key);
+        }
+        
+        boptions->libraries_count = arr->length;
+      }
+    }
+    else if(strcmp(val->key, "compiler_options"))
+    {
+      if(val->type == json_type_array)
+      {
+        json_object *arr = (json_object *)val;
+        
+        boptions->compiler_options = malloc(sizeof(char *) * arr->length);
+        
+        int i;
+        for(i = 0; i < arr->length; i++) 
+        {
+          boptions->includes[i] = strdup(arr->values[i]->key);
+        }
+        
+        boptions->includes_count = arr->length;
+      }
+    }
+  }
+}
 
+BuildOptions easymake_build_options(char *buf, char *target)
+{
+  BuildOptions boptions;
+  
+  boptions.project = NULL;
+  boptions.compiler = NULL;
+  boptions.output = NULL;
+  boptions.sources = NULL;
+  boptions.includes = NULL;
+  boptions.libraries = NULL;
+  boptions.compiler_options = NULL;
+  boptions.sources_count = 0;
+  boptions.includes_count = 0;
+  boptions.libraries_count = 0;
+  boptions.compiler_options_count = 0;
+  
+  printf("easymake: parsing json...\n");
   json_object *json = json_parse(buf);
-
+  
+  printf("easymake: parsing json data...\n");
   if(json->values[0]->type != json_type_object)
   {
     printf("easymake: invalid buildfile\n");
+    
     EXIT_CODE = 6;
-<<<<<<< HEAD
-=======
     EXIT_AFTER_PREP_BLDOPTS = true;
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-    return package;
+    
+    return boptions;
   }
 
   json_object *object = (json_object *)json->values[0];
-
+  
+  apply_build_options(&boptions, object);
+  
   int i;
   for(i = 0; i < object->length; i++)
-<<<<<<< HEAD
   {
     json_value *val = object->values[i];
-    if(val->type == json_type_string)
+    
+    if(strcmp(val->key, "targets"))
     {
-      json_string *str = (json_string *)val;
-      if(strcmp(str->key, "project") == 0)
+      if(val->type == json_type_array)
       {
+        json_object *arr = (json_object *)val;
         
-      }
-      else if(strcmp(str->key, "") == 0)
-      {
-        
+        int j;
+        for(j = 0; j < arr->length; j++)
+        {
+          json_value *val = arr->values[j];
+          
+          if(strcmp(val->key, target))
+          {
+            if(val->type == json_type_object)
+            {
+              json_object *obj = (json_object *)arr->values[j];
+              apply_build_options(&boptions, obj);
+            }
+          }
+        }
       }
     }
   }
   
-=======
-  {}
-
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
   json_free(object);
+  
+  return boptions;
 }
 
-void easymake_build_project(Package *package, char *target_name)
+void easymake_build_project(BuildOptions *boptions)
 {
-  if(EXIT_AFTER_PREP_BLDOPTS)
-      return;
-
-  else if (!strcmp(target_name, "all"))
-  {
-    goto cleanup;
-  }
-  else
-  {
-    int i;
-    for(i = 0; i < package->targets_count; i++)
-    {
-      BuildTarget target = package->targets[i];
-      if (strcmp(target.target, target_name) == 0)
-      {
-<<<<<<< HEAD
-        printf("easymake: building project \'%s\' with target \'%s\'\n", target.boptions.project, target.target);
-        
-        char command[512] = "";
-        char *temp = "";
-        
-        if(!target.boptions.compiler)
-=======
-        printf("easymake: building project \'%s\' with target \'%s\'\n", target->boptions.project, target->target);
-
-        char command[512] = "";
-        char *temp = "";
-
-        if(!target->boptions.compiler)
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-        {
-          printf("easymake: no compiler specified\n");
-          EXIT_CODE = 2;
-          return;
-        }
-<<<<<<< HEAD
-        
-        temp = concat(command, target.boptions.compiler);
-        strcpy(command, temp);
-        free(temp);
-        
-        if(target.boptions.output)
-=======
-
-        temp = concat(command, target->boptions.compiler);
-        strcpy(command, temp);
-        free(temp);
-
-        if(target->boptions.output)
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-        {
-          temp = concat(command, " -o ");
-          strcpy(command, temp);
-          free(temp);
-<<<<<<< HEAD
-          
-          temp = concat(command, target.boptions.output);
-=======
-
-          temp = concat(command, target->boptions.output);
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-          strcpy(command, temp);
-          free(temp);
-        }
-
-        int i;
-<<<<<<< HEAD
-      
-        if(target.boptions.sources_count > 0)
-        for(i = 0; i < target.boptions.sources_count; i++)
-=======
-
-        if(target->boptions.sources_count > 0)
-        for(i = 0; i < target->boptions.sources_count; i++)
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-        {
-          temp = concat(command, " ");
-          strcpy(command, temp);
-          free(temp);
-<<<<<<< HEAD
-      
-          temp = concat(command, (target.boptions.sources)[i]);
-=======
-
-          temp = concat(command, (target->boptions.sources)[i]);
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-          strcpy(command, temp);
-          free(temp);
-        }
-        else
-        {
-          printf("easymake: no source files specified\n");
-          EXIT_CODE = 1;
-          return;
-        }
-<<<<<<< HEAD
-      
-        if(target.boptions.includes_count > 0)
-        for(i = 0; i < target.boptions.includes_count; i++)
-=======
-
-        if(target->boptions.includes_count > 0)
-        for(i = 0; i < target->boptions.includes_count; i++)
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-        {
-          temp = concat(command, " -I");
-          strcpy(command, temp);
-          free(temp);
-<<<<<<< HEAD
-      
-          temp = concat(command, (target.boptions.includes)[i]);
-          strcpy(command, temp);
-          free(temp);
-        }
-                
-        if(target.boptions.libraries_count > 0)
-=======
-
-          temp = concat(command, (target->boptions.includes)[i]);
-          strcpy(command, temp);
-          free(temp);
-        }
-
-        if(target->boptions.libraries_count > 0)
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-        {
-          printf("%d\n", target.boptions.libraries_count);
-        }
-<<<<<<< HEAD
-      
-        if(target.boptions.libraries_count > 0)
-        for(i = 0; i < target.boptions.libraries_count; i++)
-=======
-
-        if(target->boptions.libraries_count > 0)
-        for(i = 0; i < target->boptions.libraries_count; i++)
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-        {
-          temp = concat(command, " ");
-          strcpy(command, temp);
-          free(temp);
-<<<<<<< HEAD
-      
-          temp = concat(command, (target.boptions.libraries)[i]);
-          strcpy(command, temp);
-          free(temp);
-        }
-      
-        if(target.boptions.compiler_options_count > 0)
-        for(i = 0; i < target.boptions.compiler_options_count; i++)
-=======
-
-          temp = concat(command, (target->boptions.libraries)[i]);
-          strcpy(command, temp);
-          free(temp);
-        }
-
-        if(target->boptions.compiler_options_count > 0)
-        for(i = 0; i < target->boptions.compiler_options_count; i++)
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-        {
-          temp = concat(command, " ");
-          strcpy(command, temp);
-          free(temp);
-<<<<<<< HEAD
-      
-          temp = concat(command, (target.boptions.compiler_options)[i]);
-=======
-
-          temp = concat(command, (target->boptions.compiler_options)[i]);
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-          strcpy(command, temp);
-          free(temp);
-        }
-
-        printf("easymake: %s\n", command);
-        system(command);
-<<<<<<< HEAD
-        
-        printf("easymake: build process complete. output file: \'%s\'\n", target.boptions.output);
-        
-=======
-
-        printf("easymake: build process complete. output file: \'%s\'\n", target->boptions.output);
-
->>>>>>> 6a610bef852c474fba39a7d605cdce2faedcee22
-        goto cleanup;
-      }
-    }
-  }
-
-  printf("easymake: target not found\n");
-
-  cleanup:
-  {
-
-  }
+  if(EXIT_AFTER_PREP_BLDOPTS) return;
+  
+  
 }
 
 int main(int argc, char *argv[])
 {
+  char *file = "build.ezmk", *target = "\0";
+  
   if(argc > 1)
   {
-    if(!strcmp(argv[1], "-v") || !strcmp(argv[1], "--version"))
+    int i;
+    for(i = 1; i < argc; i++)
     {
-      printf("easymake v%.1f - made by the easymake team (all contributors on github)\n", VERSION);
-    }
-    else if(!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))
-    {
-      printf("easymake v%.1f - usage\n * --help     |  shows this page\n * --version  |  shows the easymake version", VERSION);
-    }
-    else
-    {
-      char *buf = easymake_read_file(argv[1]);
-
-      if(!buf) return 0;
-
-      Package package = easymake_build_options(buf);
-      easymake_build_project(&package, "default");
+      char *arg = argv[i];
+      
+      if(strcmp(arg, "-v") || strcmp(arg, "--version"))
+      {
+        printf("easymake v%.1f - copyright (c) 2020 - 2021 EasySoft\n", VERSION);
+        return 0;
+      }
+      else if(strcmp(arg, "-h") || strcmp(arg, "--help"))
+      {
+        printf("easymake: usage: $ easymake [options] <target>\n");
+        return 0;
+      }
+      else if(strcmp(arg, "-f") || strcmp(arg, "--file"))
+      {
+        if(i + 1 < argc)
+        {
+          file = argv[i + 1];
+        }
+      }
     }
   }
-  else
+  
+  printf("easymake: reading build file...\n");
+  char *buf = easymake_read_file(file);
+  
+  if(buf)
   {
-    char *buf = easymake_read_file("build.ezmk");
-
-    if(!buf) return 0;
-
-    Package package = easymake_build_options(buf);
-    easymake_build_project(&package, "default");
+    printf("easymake: building project options...\n");
+    BuildOptions boptions = easymake_build_options(buf, target);
+    
+    printf("easymake: building project...\n");
+    easymake_build_project(&boptions);
   }
-
+  
   if(EXIT_CODE != 0) {
-    printf("easymake: ERROR: NON-ZERO EXIT CODE %d\n", EXIT_CODE);
+    printf("easymake: error: non-zero exit code (%d)\n", EXIT_CODE);
   }
 
   return EXIT_CODE;

@@ -1,9 +1,8 @@
 #ifndef EASYMAKE_H
 #define EASYMAKE_H
 
+#include "easylib.h"
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 
 typedef struct
 {
@@ -12,20 +11,8 @@ typedef struct
   int sources_count, includes_count, libraries_count, compiler_options_count;
 } BuildOptions;
 
-typedef struct
-{
-  char *target;
-  BuildOptions boptions;
-} BuildTarget;
-
-typedef struct
-{
-  int targets_count;
-  BuildTarget **targets;
-} Package;
-
 char *easymake_read_file(char *file);
-Package easymake_build_options(char *buf);
-void easymake_build_project(Package *package, char *target_name);
+BuildOptions easymake_build_options(char *buf, char *target);
+void easymake_build_project(BuildOptions *boptions);
 
 #endif
