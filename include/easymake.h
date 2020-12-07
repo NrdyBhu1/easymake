@@ -21,7 +21,7 @@ typedef struct
 typedef struct
 {
   int targets_count;
-  BuildTarget *targets;
+  BuildTarget **targets;
 } Package;
 
 char *easymake_read_file(char *file);
