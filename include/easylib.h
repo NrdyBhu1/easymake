@@ -42,7 +42,7 @@ typedef char * string_t;
   typedef int int32_t;
   typedef unsigned int uint32_t;
   typedef long int64_t;
-  typedef unsigned long uint64_t;
+  typedef unsigned long uint64_t; 
 #endif
 
 struct block { int size, free; struct block *next; };
@@ -52,8 +52,7 @@ static struct block *free_blocks = (void *)memory;
 
 static int onheap(void *ptr)
 {
-  if(((void *)memory) <= ptr && ptr <= ((void *)memory) + HEAP_SIZE) return 1;
-  else return 0;
+  return (((void *)memory) <= ptr && ptr <= ((void *)memory) + HEAP_SIZE);
 }
 #include <stdio.h>
 static void split(struct block *block, int size)
@@ -77,29 +76,36 @@ static void *malloc(int size)
   
   if(free_blocks->size == 0)
   {
-    printf("malloc: init memory\n");
     free_blocks->size = HEAP_SIZE - sizeof(struct block);
     free_blocks->free = 1;
     free_blocks->next = NULL;
   }
   
-  while((current->size < size || !current->free) && current->next != NULL)
+  while(current != NULL)
   {
+    if(current->free)
+    {
+      if(current->size == size)
+      {
+        current->free = 0;
+        current++;
+        
+        result = (void *)current;
+        break;
+      }
+      else if(current->size > size + sizeof(struct block))
+      {
+        split(current, size);
+        current++;
+        
+        result = (void *)current;
+        break;
+      }
+    }
+    
     printf("malloc: skip [%d,%d] to [%d,%d]\n", current->size, current->free, current->next->size, current->next->free);
     current = current->next;
   }
-  
-  if(current->size == size)
-  {
-    current->free = 0;
-    result = (void *)(++current);
-  }
-  else if(current->size > size + sizeof(struct block))
-  {
-    split(current, size);
-    result = (void *)(++current);
-  }
-  else result = NULL;
   
   return result;
 }

@@ -1,7 +1,8 @@
 #ifndef EASYJSON_H
 #define EASYJSON_H
 
-#include "easylib.h"
+#include <stdlib.h>
+#include <string.h>
 
 enum json_type { json_type_unknown, json_type_string, json_type_number, json_type_array, json_type_object };
 
@@ -22,20 +23,16 @@ static struct json_object *json_parse(char *json)
     char c = json[b];
     if(c != ' ' && c != '\n')
     {
-      printf("%d\n", b);
-      int length = memsize(buffer);
+      int length = strlen(buffer) + 1;
       
       buffer = realloc(buffer, length + 1);
 
       buffer[length - 1] = c;
       buffer[length] = '\0';
-      
-      printf("%s\n", buffer);
     }
   }
 
   long buffer_length = strlen(buffer);
-  printf("BUFFER_LENGTH: %d\n", buffer_length);
 
   int current_count = 1;
   json_value **current = malloc(sizeof(json_value *));
@@ -265,7 +262,7 @@ static struct json_object *json_parse(char *json)
         {
           if(k2 == 1 || k2 == 4)
           {
-            int length = memsize(storage);
+            int length = strlen(storage) + 1;
             storage = realloc(storage, length + 1);
             
             storage[length - 1] = c;
