@@ -47,7 +47,7 @@ typedef char * string_t;
 
 struct block { int size, free; struct block *next; };
 
-unsigned char memory[HEAP_SIZE] = {0};
+unsigned char memory[HEAP_SIZE];
 static struct block *free_blocks = (void *)memory;
 
 static int onheap(void *ptr)
@@ -55,10 +55,10 @@ static int onheap(void *ptr)
   if(((void *)memory) <= ptr && ptr <= ((void *)memory) + HEAP_SIZE) return 1;
   else return 0;
 }
-
+#include <stdio.h>
 static void split(struct block *block, int size)
 {
-  struct block *new_block = (void *)((void *)block + size + sizeof(struct block));
+  struct block *new_block = (void *)(((void *)block) + size + sizeof(struct block));
   
   new_block->size = (block->size) - size - sizeof(struct block);
   new_block->free = 1;
@@ -71,21 +71,21 @@ static void split(struct block *block, int size)
 
 static void *malloc(int size)
 {
-  struct block *current, *previous;
+  printf("malloc: size = %d + %d\n", size, sizeof(struct block));
+  struct block *current = free_blocks;
   void *result;
   
   if(free_blocks->size == 0)
   {
+    printf("malloc: init memory\n");
     free_blocks->size = HEAP_SIZE - sizeof(struct block);
     free_blocks->free = 1;
     free_blocks->next = NULL;
   }
   
-  current = free_blocks;
-  
-  while(current->size < size || current->free == 0 && current->next != NULL)
+  while((current->size < size || !current->free) && current->next != NULL)
   {
-    previous = current;
+    printf("malloc: skip [%d,%d] to [%d,%d]\n", current->size, current->free, current->next->size, current->next->free);
     current = current->next;
   }
   
@@ -112,6 +112,7 @@ static void merge(void)
   {
     if(cur->free && cur->next->free)
     {
+      printf("merge: size: %d + %d + %d\n", cur->size, cur->next->size, sizeof(struct block));
       cur->size += (cur->next->size) + sizeof(struct block);
       cur->next = cur->next->next;
       continue;
@@ -126,7 +127,7 @@ static void free(void *ptr)
   if(onheap(ptr))
   {
     struct block *cur = ptr;
-    --cur;
+    cur--;
     
     cur->free = 1;
     
@@ -166,7 +167,7 @@ static void memcpy(void *dest, void *src, int size)
   int i;
   for(i = 0; i < size; i++) b_dest[i] = b_src[i];
 }
-#include <stdio.h>
+
 static void *realloc(void *ptr, int size)
 {
   if(onheap(ptr))
@@ -181,9 +182,9 @@ static void *realloc(void *ptr, int size)
       
       return new_ptr;
     }
-    else { printf("newptr is null!\n"); return NULL; }
+    else return NULL;
   }
-  else { printf("not on heap!\n"); return NULL; }
+  else return NULL;
 }
 
 static int memuse(void)

@@ -27,6 +27,7 @@ char *easymake_read_file(char *file_path)
   char *text = (char *)malloc(length + 1);
 
   size_t read_count = fread(text, 1, length, file);
+  printf("read_count: %d\n", read_count);
   text[read_count] = '\0';
 
   fclose(file);

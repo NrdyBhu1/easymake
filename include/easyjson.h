@@ -16,34 +16,31 @@ static struct json_object *json_parse(char *json)
   char *buffer = malloc(sizeof(char));
   buffer[0] = '\0';
   
-  printf("start\n");
   int b;
   for(b = 0; b < json_length; b++)
   {
-    printf("%d\n", b);
     char c = json[b];
     if(c != ' ' && c != '\n')
     {
-      int length = strlen(buffer);
-      printf("memsize before: %d\n", memsize(buffer));
-      printf("reallocating...\n");
+      printf("%d\n", b);
+      int length = memsize(buffer);
+      
       buffer = realloc(buffer, length + 1);
-      if(buffer == NULL) printf("whatt\n");
-      printf("memsize after: %d\n", memsize(buffer));
 
-      buffer[length] = c;
-      buffer[length + 1] = '\0';
+      buffer[length - 1] = c;
+      buffer[length] = '\0';
+      
+      printf("%s\n", buffer);
     }
   }
-  printf("stop\n");
 
   long buffer_length = strlen(buffer);
-  printf("len: %d\n", buffer_length);
+  printf("BUFFER_LENGTH: %d\n", buffer_length);
 
   int current_count = 1;
   json_value **current = malloc(sizeof(json_value *));
 
-  char *storage = malloc(1);
+  char *storage = malloc(sizeof(char));
   storage[0] = '\0';
 
   json_object *object = malloc(sizeof(json_object));
@@ -268,11 +265,11 @@ static struct json_object *json_parse(char *json)
         {
           if(k2 == 1 || k2 == 4)
           {
-            int length = strlen(storage);
-            storage = realloc(storage, sizeof(char) * (length + 2));
+            int length = memsize(storage);
+            storage = realloc(storage, length + 1);
             
-            storage[length] = c;
-            storage[length + 1] = '\0';
+            storage[length - 1] = c;
+            storage[length] = '\0';
           }
         }
         break;
