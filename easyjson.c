@@ -20,23 +20,24 @@
  */
 
 /* Includes */
-#include "easylib.h"
 #include "easyjson.h"
+#include "easylib.h"
 
-/* Types */
-typedef struct {
-	JsonObject object;
-	ConcurrentObject last;
-} ConcurrentObject;
-
-JsonObject json_parse(String json)
+/* Function Definitions */
+JsonValue
+ezjson_compile(char *json)
 {
 	String buffer = ez_strtrm(json, " \n");
 	int length = ez_strlen(buffer);
 	
-	ConcurrentObject current;
+	int count = 1;
+	JsonValue *values = (JsonValue *)ez_alloc(sizeof(JsonValue));
 	
-	current.object = { 0 };
+	values[count - 1].key = NULL;
+	values[count - 1].value_type = JSON_TYPE_OBJECT;
+	values[count - 1].string_value = NULL;
+	values[count - 1].values_count = 0;
+	values[count - 1].values = NULL;
 	
 	int i;
 	for (i = 0; i < length; i++) {
@@ -45,10 +46,27 @@ JsonObject json_parse(String json)
 		switch (c) {
 			case '{':
 			case '[': {
-				JsonObject obj;
+				JsonValue value;
 				
-				if (c == '{') obj.
+				if (c == '{') value.value_type = JSON_TYPE_OBJECT;
+				if (c == '[') value.value_type = JSON_TYPE_ARRAY;
+				
+				if (values[count - 1].values == NULL) {
+					values[count - 1].values = (JsonValue *)ez_alloc(sizeof(JsonValue));
+				} else {
+					values[count - 1].values = (JsonValue *)ez_realloc(values[count - 1].values, sizeof(JsonValue) * (values[count - 1].values_count + 1));	
+				}
+				
+				values[count - 1].values_count++;
+				values[count - 1].values[values[count - 1].values_count - 1] = value;
+				
+				
+				
 				break;
+			}
+			case ']':
+			case '}': {
+				
 			}
 		}
 	}

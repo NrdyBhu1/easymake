@@ -22,41 +22,25 @@
 #ifndef EASYJSON_H
 #define EASYJSON_H
 
-#ifndef EASYLIB_H
-	#error "easyjson: missing dependency \'easylib\'"
-#endif
-
 /* Types */
 enum {
 	JSON_TYPE_NOVALUE,
 	JSON_TYPE_STRING,
 	JSON_TYPE_OBJECT,
-	JSON_TYPE_ARRAY,
+	JSON_TYPE_ARRAY
 };
 
-typedef struct {
-	String key;
+struct json_value {
+	char *key;
 	int value_type;
-	JsonString string_value;
-	JsonObject object_value;
-} JsonValue;
-
-typedef struct {
-	int list_count;
-	JsonValue list[100];
-} JsonValues;
-
-typedef struct {
-	String string_value;
-} JsonString;
-
-typedef struct {
+	char *string_value;
 	int values_count;
-	JsonValues values;
-} JsonObject;
+	struct json_value *values;
+};
+typedef struct json_value JsonValue;
 
 /* Function Declarations */
-JsonObject *ezjson_parse(String json);
-void ezjson_free(JsonObject *object);
+JsonValue ezjson_compile(char *json);
+char *ezjson_decompile(JsonValue value);
 
 #endif

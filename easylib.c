@@ -22,9 +22,9 @@
 #include "easylib.h"
 
 /* Types */
-typedef struct Block {
+typedef struct block {
 	int size, free;
-	struct Block *next;
+	struct block *next;
 } Block;
 
 /* Function Declarations */

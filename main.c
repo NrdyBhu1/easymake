@@ -1,7 +1,10 @@
-#include "easylib.h"
+#include "easyjson.h"
 #include <stdio.h>
 
 int main(void)
 {
-	JsonObject *object = ezjson_parse("{ \"project\": \"easymake\",  }");
+	String json = "{ \"project\": \"easymake\", \"targets\": [ \"debug\": { \"compiler\": \"gcc\" } ] }";
+	
+	JsonValue value = ezjson_compile(json);
+	
 }
