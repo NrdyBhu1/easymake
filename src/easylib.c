@@ -34,6 +34,7 @@ void merge(void);
 /* Global Variables */
 unsigned char HEAP[HEAP_SIZE];
 Block *FREE_BLOCKS = (void *)HEAP;
+int TOTAL_ALLOCATIONS = 0;
 
 /* Function Definitions */
 void
@@ -79,6 +80,8 @@ ez_alloc(int size)
 		FREE_BLOCKS->free = 1;
 		FREE_BLOCKS->next = NULL;
 	}
+	
+	TOTAL_ALLOCATIONS += size;
 	
 	while (current != NULL) {
 		if (current->free) {
@@ -187,6 +190,12 @@ ez_onheap(void *ptr)
 }
 
 int
+ez_talloc(void)
+{
+	return TOTAL_ALLOCATIONS;
+}
+
+int
 ez_strlen(String str)
 {
 	int length;
@@ -223,7 +232,7 @@ ez_strcpy(String dest, String src)
 String
 ez_strdup(String str)
 {
-	int length = strlen(str);
+	int length = ez_strlen(str);
 	
 	String new_str = (String)ez_alloc(length + 1);
 	ez_memcpy(new_str, str, length + 1);
@@ -265,13 +274,13 @@ ez_strtrm(String str, String trim)
 		int j, skip = 0;
 		for (j = 0; trim[j] != '\0'; j++) {
 			if (str[i] == trim[j]) {
-				skip = 0;
+				skip = 1;
 				break;
 			}
 		}
 		
 		if (!skip) {
-			int length = strlen(new_str);
+			int length = ez_strlen(new_str);
 			new_str = (String)ez_realloc(new_str, length + 2);
 			
 			new_str[length] = str[i];

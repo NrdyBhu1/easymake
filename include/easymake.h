@@ -4,15 +4,15 @@
 #include "easylib.h"
 #include <stdio.h>
 
-typedef struct
-{
+struct build_options {
   const char *project, *compiler, *output;
   const char **sources, **includes, **libraries, **compiler_options;
   int sources_count, includes_count, libraries_count, compiler_options_count;
-} BuildOptions;
+};
+typedef struct build_options BuildOptions;
 
-char *easymake_read_file(char *file);
-BuildOptions easymake_build_options(char *buf, char *target);
-void easymake_build_project(BuildOptions *boptions);
+char *easymake_read_file(char *);
+BuildOptions easymake_build_options(char *, char *);
+void easymake_build_project(BuildOptions *);
 
 #endif
