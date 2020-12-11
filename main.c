@@ -1,10 +1,11 @@
-#include "easyjson.h"
 #include <stdio.h>
+#include "easycolor.h"
 
 int main(void)
 {
-	String json = "{ \"project\": \"easymake\", \"targets\": [ \"debug\": { \"compiler\": \"gcc\" } ] }";
+	ezcolor_set(COLOR_RED, 0); printf("Hello, ");
+	ezcolor_set(COLOR_GREEN, 0); printf("world!\n");
 	
-	JsonValue value = ezjson_compile(json);
-	
+	ezcolor_set(COLOR_DARK_WHITE, 0); //Reset to default
+	return 0;
 }

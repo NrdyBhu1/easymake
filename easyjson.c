@@ -54,18 +54,20 @@ ezjson_compile(char *json)
 				if (values[count - 1].values == NULL) {
 					values[count - 1].values = (JsonValue *)ez_alloc(sizeof(JsonValue));
 				} else {
-					values[count - 1].values = (JsonValue *)ez_realloc(values[count - 1].values, sizeof(JsonValue) * (values[count - 1].values_count + 1));	
+					values[count - 1].values = (JsonValue *)ez_realloc(values[count - 1].values, sizeof(JsonValue) * (values[count - 1].values_count + 1));
 				}
 				
 				values[count - 1].values_count++;
 				values[count - 1].values[values[count - 1].values_count - 1] = value;
 				
-				
+				values = ez_realloc(values, sizeof(JsonValue) * (count + 1));
+				values[count - 1] = value;
 				
 				break;
 			}
 			case ']':
 			case '}': {
+				values = ez_realloc(values, sizeof(JsonValue) * (count - 1));
 				
 			}
 		}
