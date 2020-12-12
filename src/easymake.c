@@ -1,290 +1,272 @@
 #include "easymake.h"
-#include "jsmn.h"
-#include "utils.h"
- 
-float VERSION = 0.1;
+#include "easylib.h"
+#include "easyjson.h"
 
-int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
-  if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
-      strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
-    return 0;
-  }
-  return -1;
+#include <stdlib.h>
+#include <stdio.h>
+
+float VERSION = 0.2;
+int EXIT_CODE = 0, EXIT_AFTER_PREP_BLDOPTS = 0;
+
+char *
+easymake_read_file(char *file_path)
+{
+	FILE *file;
+	file = fopen(file_path, "r");
+	
+	if (!file) {
+		printf("easymake: error: build file not found\n");
+		return NULL;
+	}
+	
+	fseek(file, 0, SEEK_END);
+	
+	long length = ftell(file);
+	rewind(file);
+	
+	char *text = (char *)ez_alloc(length + 1);
+	
+	size_t read_count = fread(text, 1, length, file);
+	text[read_count] = '\0';
+	
+	fclose(file);
+	return text;
 }
 
-char *easymake_read_file(char *file_path)
+void
+apply_build_options(BuildOptions *boptions, JsonValue *object)
 {
-  FILE *file;
-  file = fopen(file_path, "r");
-  
-  if(!file)
-  {
-    printf("easymake: build file not found!\n");
-    return NULL;
-  }
-  
-  fseek(file, 0, SEEK_END);
-  
-  long length = ftell(file);
-  rewind(file);
-  
-  char *text = (char *)malloc(length + 1);
-  
-  size_t read_count = fread(text, 1, length, file);
-  text[read_count] = '\0';
-  
-  fclose(file);
-  return text;
+	int i;
+	for (i = 0; i < object->values_count; i++) {
+		JsonValue *val = object->values[i];
+		
+		if (ez_strcmp(val->key, "project")) {
+			if (val->value_type == JSON_TYPE_STRING) {
+				boptions->project = ez_strdup(val->string_value);
+			}
+		} else if (ez_strcmp(val->key, "compiler")) {
+			if (val->value_type == JSON_TYPE_STRING) {
+				boptions->compiler = ez_strdup(val->string_value);
+			}
+		} else if (ez_strcmp(val->key, "output")) {
+			if (val->value_type == JSON_TYPE_STRING) {
+				boptions->output = ez_strdup(val->string_value);
+			}
+		} else if (ez_strcmp(val->key, "default_target")) {
+			if(val->value_type == JSON_TYPE_STRING) {
+				boptions->default_target = ez_strdup(val->string_value);
+			}
+		} else if (ez_strcmp(val->key, "sources")) {
+			if (val->value_type == JSON_TYPE_ARRAY) {
+				boptions->sources = (char **)ez_alloc(sizeof(char *) * val->values_count);
+				
+				int i;
+				for (i = 0; i < val->values_count; i++) {
+					boptions->sources[i] = ez_strdup(val->values[i]->key);
+				}
+				
+				boptions->sources_count = val->values_count;
+			}
+		} else if (ez_strcmp(val->key, "includes")) {
+			if (val->value_type == JSON_TYPE_ARRAY) {
+				boptions->includes = (char **)ez_alloc(sizeof(char *) * val->values_count);
+				
+				int i;
+				for (i = 0; i < val->values_count; i++) {
+					boptions->includes[i] = ez_strdup(val->values[i]->key);
+				}
+				
+				boptions->includes_count = val->values_count;
+			}
+		} else if (ez_strcmp(val->key, "libraries")) {
+			if (val->value_type == JSON_TYPE_ARRAY) {
+				boptions->libraries = (char **)ez_alloc(sizeof(char *) * val->values_count);
+				
+				int i;
+				for (i = 0; i < val->values_count; i++) {
+					boptions->libraries[i] = ez_strdup(val->values[i]->key);
+				}
+				
+				boptions->libraries_count = val->values_count;
+			}
+		} else if (ez_strcmp(val->key, "compiler_options")) {
+			if (val->value_type == JSON_TYPE_ARRAY) {
+				boptions->compiler_options = (char **)ez_alloc(sizeof(char *) * val->values_count);
+				
+				int i;
+				for (i = 0; i < val->values_count; i++) {
+					boptions->compiler_options[i] = ez_strdup(val->values[i]->key);
+				}
+				
+				boptions->compiler_options_count = val->values_count;
+			}
+		}
+	}
 }
 
-BuildOptions easymake_build_options(char *buf)
+BuildOptions
+easymake_build_options(char *buf, char *target)
 {
-  BuildOptions boptions;
-
-  jsmn_parser parser;
-  jsmntok_t tokens[512];
-  jsmn_init(&parser);
-  int i;
-  int r = jsmn_parse(&parser, buf, strlen(buf), tokens, sizeof(tokens) / sizeof(tokens[0]));
-
-  if(r > 1 && tokens[0].type == JSMN_OBJECT)
-  {
-    for (i = 1; i < r; i++)
-    {
-      if (jsoneq(buf, &tokens[i], "project") == 0)
-      {
-        //printf("- Project: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
-               //buf + tokens[i + 1].start);
-
-        boptions.project = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
-        i++;
-      }
-
-      else if (jsoneq(buf, &tokens[i], "output") == 0)
-      {
-        //printf("- Output: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
-               //buf + tokens[i + 1].start);
-
-        boptions.output = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
-        i++;
-      }
-
-      else if (jsoneq(buf, &tokens[i], "compiler") == 0)
-      {
-        //printf("- Compiler: %.*s\n", tokens[i + 1].end - tokens[i + 1].start,
-               //buf + tokens[i + 1].start);
-
-        boptions.compiler = cstrndup(buf + tokens[i + 1].start, tokens[i + 1].end - tokens[i + 1].start);
-        i++;
-      }
- 
-      else if (jsoneq(buf, &tokens[i], "includes") == 0)
-      {
-        int j;
-        //printf("- Includes:\n");
-        
-        if (tokens[i + 1].type != JSMN_ARRAY) {
-          continue;
-        }
-
-        char **includes = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
-
-        for (j = 0; j < tokens[i + 1].size; j++)
-        {
-          jsmntok_t *g = &tokens[i + j + 2];
-          //printf("  * %.*s\n", g->end - g->start, buf + g->start);
-          includes[j] = cstrndup(buf + g->start, g->end - g->start);
-        }
-
-        boptions.includes = (const char **)includes;
-        boptions.includes_count = tokens[i + 1].size;
-        
-        i += tokens[i + 1].size + 1;
-      }
-
-      else if (jsoneq(buf, &tokens[i], "sources") == 0)
-      {
-        int j;
-        //printf("- Sources:\n");
-        
-        if (tokens[i + 1].type != JSMN_ARRAY) {
-          continue;
-        }
-
-        char **sources = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
-
-        for (j = 0; j < tokens[i + 1].size; j++)
-        {
-          jsmntok_t *g = &tokens[i + j + 2];
-          //printf("  * %.*s\n", g->end - g->start, buf + g->start);
-          sources[j] = cstrndup(buf + g->start, g->end - g->start);
-        }
-
-        boptions.sources = (const char **)sources;
-        boptions.sources_count = tokens[i + 1].size;
-        
-        i += tokens[i + 1].size + 1;
-      }
-      
-      else if (jsoneq(buf, &tokens[i], "compiler_options") == 0)
-      {
-        int j;
-        //printf("- Compiler Options:\n");
-        
-        if (tokens[i + 1].type != JSMN_ARRAY) {
-          continue;
-        }
-
-        char **compiler_options = (char **)malloc(sizeof(char *) * tokens[i + 1].size);
-
-        for (j = 0; j < tokens[i + 1].size; j++)
-        {
-          jsmntok_t *g = &tokens[i + j + 2];
-          //printf("  * %.*s\n", g->end - g->start, buf + g->start);
-          compiler_options[j] = cstrndup(buf + g->start, g->end - g->start);
-        }
-
-        boptions.compiler_options = (const char **)compiler_options;
-        boptions.compiler_options_count = tokens[i + 1].size;
-        
-        i += tokens[i + 1].size + 1;
-      }
-
-      else
-      {
-        printf("Unexpected key: %.*s\n", tokens[i].end - tokens[i].start,
-               buf + tokens[i].start);
-      }
-    }
-  }
-  else
-  {
-    printf("easymake: invalid json!\n");
-  }
-  
-  free(buf);
-  return boptions;
+	BuildOptions boptions;
+	
+	boptions.project = NULL;
+	boptions.compiler = NULL;
+	boptions.output = NULL;
+	boptions.sources = NULL;
+	boptions.default_target = NULL;
+	boptions.includes = NULL;
+	boptions.libraries = NULL;
+	boptions.compiler_options = NULL;
+	boptions.sources_count = 0;
+	boptions.includes_count = 0;
+	boptions.libraries_count = 0;
+	boptions.compiler_options_count = 0;
+	
+	JsonValue *json = ezjson_compile(buf);
+	
+	if (json->values[0]->values_count < 1) {
+		printf("easymake: error: invalid build file\n");
+		
+		EXIT_CODE = 6;
+		EXIT_AFTER_PREP_BLDOPTS = 1;
+		
+		return boptions;
+	}
+	
+	JsonValue *object = json->values[0];
+	
+	apply_build_options(&boptions, object);
+	
+	if (target == NULL) {
+		target = boptions.default_target;
+	}
+	
+	printf("easymake: building project \'%s\' with target \'%s\'\n", boptions.project, target);
+	
+	int i;
+	for (i = 0; i < object->values_count; i++) {
+		JsonValue *val = object->values[i];
+		
+		if (ez_strcmp(val->key, "targets")) {
+			if (val->value_type == JSON_TYPE_ARRAY) {
+				int j;
+				for (j = 0; j < val->values_count; j++) {
+					JsonValue *arrval = val->values[j];
+					
+					if (ez_strcmp(arrval->key, target)) {
+						if (arrval->value_type == JSON_TYPE_OBJECT) {
+							apply_build_options(&boptions, val->values[j]);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	//ezjson_free(json);
+	
+	return boptions;
 }
 
-void easymake_build_project(BuildOptions *boptions)
-{
-  printf("easymake: building project \'%s\' using compiler \'%s\'\n", boptions->project, boptions->compiler);
-  
-  char command[512] = "";
-  char *temp = "";
-  
-  if(!boptions->compiler)
-  {
-    printf("easymake: no compiler specified!\n");
-    return;
-  }
-  
-  temp = concat(command, boptions->compiler);
-  strcpy(command, temp);
-  free(temp);
-  
-  if(boptions->output)
-  {
-    temp = concat(command, " -o ");
-    strcpy(command, temp);
-    free(temp);
-    
-    temp = concat(command, boptions->output);
-    strcpy(command, temp);
-    free(temp);
-  }
-  
-  int i;
-  
-  if(boptions->sources)
-  for(i = 0; i < boptions->sources_count; i++)
-  {
-    temp = concat(command, " ");
-    strcpy(command, temp);
-    free(temp);
-    
-    temp = concat(command, (boptions->sources)[i]);
-    strcpy(command, temp);
-    free(temp);
-  }
-  else
-  {
-    printf("easymake: no source files specified!\n");
-    return;
-  }
-  
-  if(boptions->includes)
-  for(i = 0; i < boptions->includes_count; i++)
-  {
-    temp = concat(command, " -I");
-    strcpy(command, temp);
-    free(temp);
-    
-    temp = concat(command, (boptions->includes)[i]);
-    strcpy(command, temp);
-    free(temp);
-  }
-  
-  if(boptions->libraries)
-  for(i = 0; i < boptions->libraries_count; i++)
-  {
-    temp = concat(command, " ");
-    strcpy(command, temp);
-    free(temp);
-    
-    temp = concat(command, (boptions->libraries)[i]);
-    strcpy(command, temp);
-    free(temp);
-  }
-  
-  if(boptions->compiler_options)
-  for(i = 0; i < boptions->compiler_options_count; i++)
-  {
-    temp = concat(command, " ");
-    strcpy(command, temp);
-    free(temp);
-    
-    temp = concat(command, (boptions->compiler_options)[i]);
-    strcpy(command, temp);
-    free(temp);
-  }
-  
-  system(command);
-  
-  printf("easymake: build process complete. output file: \'%s\'\n", boptions->output);
+void
+easymake_build_project(BuildOptions *boptions) {
+	if (EXIT_AFTER_PREP_BLDOPTS) return;
+	
+	char *command = "";
+	
+	if (!boptions->compiler) {
+		printf("easymake: error: no compiler specified\n");
+		
+		EXIT_CODE = 2;
+		return;
+	}
+	
+	command = ez_strcat(command, boptions->compiler);
+	
+	if (boptions->output) {
+		command = ez_strcat(command, " -o ");
+		command = ez_strcat(command, boptions->output);
+	}
+	
+	int i;
+	
+	if (boptions->sources_count > 0) {
+		for (i = 0; i < boptions->sources_count; i++) {
+			command = ez_strcat(command, " ");
+			command = ez_strcat(command, boptions->sources[i]);
+		}
+	} else {
+		printf("easymake: error: no source file(s) specified\n");
+		
+		EXIT_CODE = 1;
+		return;
+	}
+	
+	if (boptions->includes_count > 0) {
+		for (i = 0; i < boptions->includes_count; i++) {
+			command = ez_strcat(command, " -I");
+			command = ez_strcat(command, boptions->includes[i]);
+		}
+	}
+	
+	if (boptions->libraries_count > 0) {
+		for (i = 0; i < boptions->libraries_count; i++) {
+			command = ez_strcat(command, " -L");
+			command = ez_strcat(command, boptions->libraries[i]);
+		}
+	}
+	
+	if (boptions->compiler_options_count > 0) {
+		for (i = 0; i < boptions->compiler_options_count; i++) {
+			command = ez_strcat(command, " ");
+			command = ez_strcat(command, boptions->compiler_options[i]);
+		}
+	}
+	
+	printf("easymake: executing: \'%s\'\n\n", command);
+	
+	system(command);
+	
+	printf("\neasymake: build process complete. check above for compiler errors\n");
+	
+	ez_free(command);
 }
 
 int main(int argc, char *argv[])
 {
-  if(argc > 1)
-  {
-    if(!strcmp(argv[1], "-v") || !strcmp(argv[1], "--version"))
-    {
-      printf("easymake v%.1f - made by the easymake team (all contributors on github)\n", VERSION);
-    }
-    else if(!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))
-    {
-      printf("easymake v%.1f - usage\n * --help     |  shows this page\n * --version  |  shows the easymake version", VERSION);
-    }
-    else
-    {
-      char *buf = easymake_read_file(argv[1]);
-      
-      if(!buf) return 0;
-      
-      BuildOptions boptions = easymake_build_options(buf);
-      easymake_build_project(&boptions);
-    }
-  }
-  else
-  {
-    char *buf = easymake_read_file("build.ezmk");
-    
-    if(!buf) return 0;
-    
-    BuildOptions boptions = easymake_build_options(buf);
-    easymake_build_project(&boptions);
-  }
-  
-  return 0;
+	char *file = "build.ezmk", *target = NULL;
+	
+	if (argc > 1) {
+		int i;
+		for (i = 1; i < argc; i++) {
+			char *arg = argv[i];
+			
+			if (ez_strcmp(arg, "-v") || ez_strcmp(arg, "--version")) {
+				printf("easymake v%.1f - copyright (c) 2020 - 2021 EasySoft\n", VERSION);
+				return 0;
+			} else if (ez_strcmp(arg, "-h") || ez_strcmp(arg, "--help")) {
+				printf("easymake: usage: $ easymake [options] <target>\n");
+				return 0;
+			} else if (ez_strcmp(arg, "-f") || ez_strcmp(arg, "--file")) {
+				if (i + 1 < argc) {
+					file = argv[i + 1];
+				}
+			} else {
+				target = argv[i];
+			}
+		}
+	}
+	
+	char *buf = easymake_read_file(file);
+	
+	if (buf) {
+		BuildOptions boptions = easymake_build_options(buf, target);
+		easymake_build_project(&boptions);
+	}
+	
+	if(EXIT_CODE != 0) {
+		printf("easymake: error: non-zero exit code (%d)\n", EXIT_CODE);
+	}
+	
+	return EXIT_CODE;
 }
