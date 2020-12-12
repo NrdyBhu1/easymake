@@ -1,14 +1,14 @@
-To compile easymake, you must do so manually using either tcc, gcc, clang or MSVC.
+To compile easymake manually, you must do so using either tcc, gcc, clang or MSVC.
 Here are instructions for compiling with either of those three compilers:
 
 tcc:
-  tcc src/easymake.c -Iinclude -O3 -o easymake
+  tcc src/*.c -Iinclude -O3 -o easymake
 
 gcc:
-  gcc src/easymake.c -Iinclude -s -O3 -o easymake
+  gcc src/*.c -Iinclude -s -O3 -o easymake
 
 clang:
-  clang src/easymake.c -Iinclude -O3 -o easymake
+  clang src/*.c -Iinclude -O3 -o easymake
 
 MSVC:
-  cl src/easymake.c /I include /O2
+  cl src/*.c /I include /O2

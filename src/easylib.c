@@ -111,7 +111,7 @@ ez_realloc(void *ptr, int size)
 		void *new_ptr = ez_alloc(size);
 		
 		if (new_ptr) {
-			ez_memcpy(new_ptr, ptr, ez_memsize(ptr));
+			ez_memcpy(new_ptr, ptr, size);
 			
 			ez_free(ptr);
 			
