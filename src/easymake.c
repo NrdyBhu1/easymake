@@ -148,7 +148,7 @@ easymake_build_options(char *buf, char *target)
 		JsonValue *val = object->values[i];
 		
 		if (ez_strcmp(val->key, "targets")) {
-			if (val->value_type == JSON_TYPE_ARRAY) {
+			if (val->value_type == JSON_TYPE_ARRAY || val->value_type == JSON_TYPE_OBJECT) {
 				int j;
 				for (j = 0; j < val->values_count; j++) {
 					JsonValue *arrval = val->values[j];
