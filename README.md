@@ -22,11 +22,7 @@ Download the latest version from the releases tab, or build from source (check C
 
 ## Credits
 
-[undersquire](https://gitea.com/undersquire) - Original idea, programming, project lead
-
-[DynamicDonkey](https://gitea.com/DynamicDonkey) - JSON buildscript example, README, website design, documentation
-
-[MousieDev](https://gitea.com/MousieDev) - JSON parsing, Bug squasher
+Thanks to everyone in the Cleanware organization, and everyone who contributed.
 
 ## License
 
