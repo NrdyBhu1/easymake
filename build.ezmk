@@ -1,67 +1,27 @@
 {
 	"project": "easymake",
 	"output": "easymake",
-	
+	"sources": [
+		"src/*.c"
+	],
 	"includes": [
 		"include"
 	],
-	
-	"sources": [
-		"src/easyjson.c"
-		"src/easylib.c",
-		"src/easymake.c",
-	],
-	
 	"default_target": "gcc-debug",
-	"targets": [
-		"tcc-debug": {
-			"compiler": "tcc",
-		},
+	"targets": {
 		"gcc-debug": {
 			"compiler": "gcc",
-			
 			"compiler_options": [
 				"-ggdb",
-				"-Og",
-				"-fsanitize=address"
+				"-Og"
 			]
 		},
 		"gcc-release": {
 			"compiler": "gcc",
-			
 			"compiler_options": [
 				"-s",
-				"-O3",
-				"-static"
-			]
-		},
-		"clang-debug": {
-			"compiler": "clang",
-			
-			"compiler_options": [
-				"-Og"
-			]
-		},
-		"clang-release": {
-			"compiler": "clang",
-			
-			"compiler_options": [
 				"-O3"
 			]
-		},
-		"msvc-debug": {
-			"compiler": "cl",
-			
-			"compiler_options": [
-				"/Og"
-			]
-		},
-		"msvc-release": {
-			"compiler: "cl",
-			
-			"compiler_options": [
-				"/O2"
-			]
 		}
-	]
+	}
 }

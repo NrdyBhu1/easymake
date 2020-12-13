@@ -27,7 +27,7 @@
 JsonValue *
 ezjson_decompile(char *json)
 {
-	String buffer = ez_strtrm(json, " \n");
+	String buffer = ez_fstrtrm(json, " \n");
 	int length = ez_strlen(buffer);
 
 	JsonValue *container = (JsonValue *)ez_alloc(sizeof(JsonValue));
@@ -212,32 +212,101 @@ ezjson_decompile(char *json)
 	return container;
 }
 
+void
+gen_json(char **json, int index, JsonValue *value)
+{
+	if (value->value_type == JSON_TYPE_OBJECT || value->value_type == JSON_TYPE_ARRAY) {
+		int i;
+		for (i = 0; i < index; i++) *json = ez_fstrcat(*json, "	");
+
+		if (value->key != NULL) {
+			*json = ez_fstrcat(*json, "\"");
+			*json = ez_fstrcat(*json, value->key);
+			*json = ez_fstrcat(*json, "\": ");
+		}
+
+		if (value->value_type == JSON_TYPE_OBJECT) *json = ez_fstrcat(*json, "{\n");
+		else if (value->value_type == JSON_TYPE_ARRAY) *json = ez_fstrcat(*json, "[\n");
+
+		for (i = 0; i < value->values_count; i++) {
+			JsonValue *arrval = value->values[i];
+
+			gen_json(json, index + 1, arrval);
+
+			if (i + 1 < value->values_count) {
+				*json = ez_fstrcat(*json, ",\n");
+			} else {
+				*json = ez_fstrcat(*json, "\n");
+			}
+		}
+
+		for (i = 0; i < index; i++) *json = ez_fstrcat(*json, "	");
+
+		if (value->value_type == JSON_TYPE_OBJECT) *json = ez_fstrcat(*json, "}");
+		else if (value->value_type == JSON_TYPE_ARRAY) *json = ez_fstrcat(*json, "]");
+	} else {
+		if (value->value_type == JSON_TYPE_STRING) {
+			int i;
+			for (i = 0; i < index; i++) *json = ez_fstrcat(*json, "	");
+
+			if (value->key != NULL) {
+				*json = ez_fstrcat(*json, "\"");
+				*json = ez_fstrcat(*json, value->key);
+				*json = ez_fstrcat(*json, "\": \"");
+			}
+
+			if (value->string_value != NULL) {
+				*json = ez_fstrcat(*json, value->string_value);
+			}
+
+			*json = ez_fstrcat(*json, "\"");
+		} else if (value->value_type == JSON_TYPE_NOVALUE) {
+			int i;
+			for (i = 0; i < index; i++) *json = ez_fstrcat(*json, "	");
+
+			if (value->key != NULL) {
+				*json = ez_fstrcat(*json, "\"");
+				*json = ez_fstrcat(*json, value->key);
+				*json = ez_fstrcat(*json, "\"");
+			}
+		}
+	}
+}
+
 char *
 ezjson_compile(JsonValue *value)
 {
-	/*
-	 * This function needs to take in a JsonValue
-	 * and basically branch through it and generate
-	 * clean json.
-	*/
+	char *json = (char *)ez_alloc(sizeof(char));
+	json[0] = '\0';
 
-	if (value->value_type != JSON_TYPE_OBJECT) {
-		return NULL;
-	}
+	gen_json(&json, 0, value);
 
-	int i;
-	for (i = 0; i < value->values_count; i++) {
-
-	}
+	return json;
 }
 
 void
 ezjson_free(JsonValue *value)
 {
-	/*
-	 * This function just needs to branch
-	 * through the JsonValue and free everything
-	 * that is allocated with ez_alloc. I'll implement
-	 * this function unless you really want to do it.
-	 */
+	if (value->values != NULL) {
+		int i;
+		for (i = 0; i < value->values_count; i++) {
+			JsonValue *arrval = value->values[i];
+
+			if (arrval != NULL) {
+				ezjson_free(arrval);
+			}
+		}
+
+		ez_free(value->values);
+	}
+
+	if (value->key != NULL) {
+		ez_free(value->key);
+	}
+
+	if (value->string_value != NULL) {
+		ez_free(value->string_value);
+	}
+
+	ez_free(value);
 }

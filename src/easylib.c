@@ -253,12 +253,40 @@ ez_strcat(String str, String cat)
 }
 
 String
+ez_fstrcat(String str, String cat)
+{
+	int str_length = ez_strlen(str), cat_length = ez_strlen(cat);
+	String new_str = (String)ez_alloc(str_length + cat_length + 1);
+
+	ez_memcpy(new_str, str, str_length);
+	ez_memcpy(new_str + str_length, cat, cat_length + 1);
+
+	ez_free(str);
+	ez_free(cat);
+
+	return new_str;
+}
+
+String
 ez_strcut(String str, int index)
 {
 	String new_str = (String)ez_alloc(index + 1);
 	ez_memcpy(new_str, str, index);
 
 	new_str[index] = '\0';
+
+	return new_str;
+}
+
+String
+ez_fstrcut(String str, int index)
+{
+	String new_str = (String)ez_alloc(index + 1);
+	ez_memcpy(new_str, str, index);
+
+	new_str[index] = '\0';
+
+	ez_free(str);
 
 	return new_str;
 }
@@ -287,6 +315,37 @@ ez_strtrm(String str, String trim)
 			new_str[length + 1] = '\0';
 		}
 	}
+
+	return new_str;
+}
+
+String
+ez_fstrtrm(String str, String trim)
+{
+	String new_str = (String)ez_alloc(sizeof(char));
+	new_str[0] = '\0';
+
+	int i;
+	for (i = 0; str[i] != '\0'; i++) {
+		int j, skip = 0;
+		for (j = 0; trim[j] != '\0'; j++) {
+			if (str[i] == trim[j]) {
+				skip = 1;
+				break;
+			}
+		}
+
+		if (!skip) {
+			int length = ez_strlen(new_str);
+			new_str = (String)ez_realloc(new_str, length + 2);
+
+			new_str[length] = str[i];
+			new_str[length + 1] = '\0';
+		}
+	}
+
+	ez_free(str);
+	ez_free(trim);
 
 	return new_str;
 }
