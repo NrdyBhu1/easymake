@@ -45,7 +45,10 @@ int ez_strcmp(String, String);
 void ez_strcpy(String, String);
 String ez_strdup(String);
 String ez_strcat(String, String);
+String ez_fstrcat(String, String);
 String ez_strcut(String, int);
+String ez_fstrcut(String, int);
 String ez_strtrm(String, String);
+String ez_fstrtrm(String, String);
 
 #endif

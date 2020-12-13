@@ -41,11 +41,11 @@ void
 split(Block *block, int size)
 {
 	Block *new_block = (Block *)(block + size + sizeof(Block));
-	
+
 	new_block->size = block->size - size - sizeof(Block);
 	new_block->free = 1;
 	new_block->next = block->next;
-	
+
 	block->size = size;
 	block->free = 0;
 	block->next = new_block;
@@ -55,17 +55,17 @@ void
 merge(void)
 {
 	if (FREE_BLOCKS->size == 0) return;
-	
+
 	Block *current = FREE_BLOCKS;
-	
+
 	while (current && current->next) {
 		if (current->free && current->next->free) {
 			current->size += current->next->size + sizeof(Block);
 			current->next = current->next->next;
-			
+
 			continue;
 		}
-		
+
 		current = current->next;
 	}
 }
@@ -74,33 +74,33 @@ void *
 ez_alloc(int size)
 {
 	Block *current = FREE_BLOCKS;
-	
+
 	if (FREE_BLOCKS->size == 0) {
 		FREE_BLOCKS->size = HEAP_SIZE - sizeof(Block);
 		FREE_BLOCKS->free = 1;
 		FREE_BLOCKS->next = NULL;
 	}
-	
+
 	TOTAL_ALLOCATIONS += size;
-	
+
 	while (current != NULL) {
 		if (current->free) {
 			if (current->size == size) {
 				current->free = 0;
 				current++;
-				
+
 				return (void *)current;
 			} else if (current->size > size + sizeof(Block)) {
 				split(current, size);
 				current++;
-				
+
 				return (void *)current;
 			}
 		}
-		
+
 		current = current->next;
 	}
-	
+
 	return NULL;
 }
 
@@ -109,12 +109,12 @@ ez_realloc(void *ptr, int size)
 {
 	if (ez_onheap(ptr)) {
 		void *new_ptr = ez_alloc(size);
-		
+
 		if (new_ptr) {
 			ez_memcpy(new_ptr, ptr, size);
-			
+
 			ez_free(ptr);
-			
+
 			return new_ptr;
 		} else {
 			return NULL;
@@ -130,9 +130,9 @@ ez_free(void *ptr)
 	if (ez_onheap(ptr)) {
 		Block *current = ptr;
 		current--;
-		
+
 		current->free = 1;
-		
+
 		merge();
 	}
 }
@@ -143,7 +143,7 @@ ez_memsize(void *ptr)
 	if (ez_onheap(ptr)) {
 		Block *current = ptr;
 		current--;
-		
+
 		return current->size;
 	} else {
 		return -1;
@@ -155,7 +155,7 @@ ez_memcpy(void *dest, void *src, int size)
 {
 	unsigned char *b_dest = (unsigned char *)dest;
 	unsigned char *b_src = (unsigned char *)src;
-	
+
 	int i;
 	for (i = 0; i < size; i++) {
 		b_dest[i] = b_src[i];
@@ -168,18 +168,18 @@ ez_memuse(void)
 	if (FREE_BLOCKS->size == 0) {
 		return 0;
 	}
-	
+
 	Block *current = FREE_BLOCKS;
 	int result = 0;
-	
+
 	while (current != NULL) {
 		if (!current->free) {
 			result += current->size;
 		}
-		
+
 		current = current->next;
 	}
-	
+
 	return result;
 }
 
@@ -200,7 +200,7 @@ ez_strlen(String str)
 {
 	int length;
 	for (length = 0; str[length] != '\0'; length++);
-	
+
 	return length;
 }
 
@@ -208,18 +208,18 @@ int
 ez_strcmp(String a, String b)
 {
 	int length = ez_strlen(a);
-	
+
 	if (length != ez_strlen(b)) {
 		return 0;
 	}
-	
+
 	int i;
 	for (i = 0; i < length; i++) {
 		if (a[i] != b[i]) {
 			return 0;
 		}
 	}
-	
+
 	return 1;
 }
 
@@ -233,10 +233,10 @@ String
 ez_strdup(String str)
 {
 	int length = ez_strlen(str);
-	
+
 	String new_str = (String)ez_alloc(length + 1);
 	ez_memcpy(new_str, str, length + 1);
-	
+
 	return new_str;
 }
 
@@ -245,10 +245,25 @@ ez_strcat(String str, String cat)
 {
 	int str_length = ez_strlen(str), cat_length = ez_strlen(cat);
 	String new_str = (String)ez_alloc(str_length + cat_length + 1);
-	
+
 	ez_memcpy(new_str, str, str_length);
 	ez_memcpy(new_str + str_length, cat, cat_length + 1);
-	
+
+	return new_str;
+}
+
+String
+ez_fstrcat(String str, String cat)
+{
+	int str_length = ez_strlen(str), cat_length = ez_strlen(cat);
+	String new_str = (String)ez_alloc(str_length + cat_length + 1);
+
+	ez_memcpy(new_str, str, str_length);
+	ez_memcpy(new_str + str_length, cat, cat_length + 1);
+
+	ez_free(str);
+	ez_free(cat);
+
 	return new_str;
 }
 
@@ -257,9 +272,22 @@ ez_strcut(String str, int index)
 {
 	String new_str = (String)ez_alloc(index + 1);
 	ez_memcpy(new_str, str, index);
-	
+
 	new_str[index] = '\0';
-	
+
+	return new_str;
+}
+
+String
+ez_fstrcut(String str, int index)
+{
+	String new_str = (String)ez_alloc(index + 1);
+	ez_memcpy(new_str, str, index);
+
+	new_str[index] = '\0';
+
+	ez_free(str);
+
 	return new_str;
 }
 
@@ -268,7 +296,7 @@ ez_strtrm(String str, String trim)
 {
 	String new_str = (String)ez_alloc(sizeof(char));
 	new_str[0] = '\0';
-	
+
 	int i;
 	for (i = 0; str[i] != '\0'; i++) {
 		int j, skip = 0;
@@ -278,15 +306,46 @@ ez_strtrm(String str, String trim)
 				break;
 			}
 		}
-		
+
 		if (!skip) {
 			int length = ez_strlen(new_str);
 			new_str = (String)ez_realloc(new_str, length + 2);
-			
+
 			new_str[length] = str[i];
 			new_str[length + 1] = '\0';
 		}
 	}
-	
+
+	return new_str;
+}
+
+String
+ez_fstrtrm(String str, String trim)
+{
+	String new_str = (String)ez_alloc(sizeof(char));
+	new_str[0] = '\0';
+
+	int i;
+	for (i = 0; str[i] != '\0'; i++) {
+		int j, skip = 0;
+		for (j = 0; trim[j] != '\0'; j++) {
+			if (str[i] == trim[j]) {
+				skip = 1;
+				break;
+			}
+		}
+
+		if (!skip) {
+			int length = ez_strlen(new_str);
+			new_str = (String)ez_realloc(new_str, length + 2);
+
+			new_str[length] = str[i];
+			new_str[length + 1] = '\0';
+		}
+	}
+
+	ez_free(str);
+	ez_free(trim);
+
 	return new_str;
 }
