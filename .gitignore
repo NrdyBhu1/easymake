@@ -1,3 +1,4 @@
 easymake
 easymake.exe
 easymake.obj
+*.sublime-*

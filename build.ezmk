@@ -14,17 +14,6 @@
 	"targets": [
 		"tcc-debug": {
 			"compiler": "tcc",
-			
-			"compiler_options": [
-				"-Og"
-			]
-		},
-		"tcc-release": {
-			"compiler": "tcc",
-			
-			"compiler_options": [
-				"-O3"
-			]
 		},
 		"gcc-debug": {
 			"compiler": "gcc",

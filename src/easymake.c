@@ -89,6 +89,17 @@ apply_build_options(BuildOptions *boptions, JsonValue *object)
 				
 				boptions->libraries_count = val->values_count;
 			}
+		} else if (ez_strcmp(val->key, "library_dirs")) {
+			if (val->value_type == JSON_TYPE_ARRAY) {
+				boptions->library_dirs = (char **)ez_alloc(sizeof(char *) * val->values_count);
+				
+				int i;
+				for (i = 0; i < val->values_count; i++) {
+					boptions->library_dirs[i] = ez_strdup(val->values[i]->key);
+				}
+				
+				boptions->library_dirs_count = val->values_count;
+			}
 		} else if (ez_strcmp(val->key, "compiler_options")) {
 			if (val->value_type == JSON_TYPE_ARRAY) {
 				boptions->compiler_options = (char **)ez_alloc(sizeof(char *) * val->values_count);
@@ -116,10 +127,12 @@ easymake_build_options(char *buf, char *target)
 	boptions.default_target = NULL;
 	boptions.includes = NULL;
 	boptions.libraries = NULL;
+	boptions.library_dirs = NULL;
 	boptions.compiler_options = NULL;
 	boptions.sources_count = 0;
 	boptions.includes_count = 0;
 	boptions.libraries_count = 0;
+	boptions.library_dirs_count = 0;
 	boptions.compiler_options_count = 0;
 	
 	JsonValue *json = ezjson_compile(buf);
@@ -169,7 +182,8 @@ easymake_build_options(char *buf, char *target)
 }
 
 void
-easymake_build_project(BuildOptions *boptions) {
+easymake_build_project(BuildOptions *boptions)
+{
 	if (EXIT_AFTER_PREP_BLDOPTS) return;
 	
 	char *command = "";
@@ -209,9 +223,16 @@ easymake_build_project(BuildOptions *boptions) {
 		}
 	}
 	
+	if (boptions->library_dirs_count > 0) {
+		for (i = 0; i < boptions->library_dirs_count; i++) {
+			command = ez_strcat(command, " -L");
+			command = ez_strcat(command, boptions->library_dirs[i]);
+		}
+	}
+
 	if (boptions->libraries_count > 0) {
 		for (i = 0; i < boptions->libraries_count; i++) {
-			command = ez_strcat(command, " -L");
+			command = ez_strcat(command, " -l");
 			command = ez_strcat(command, boptions->libraries[i]);
 		}
 	}
