@@ -232,6 +232,259 @@ easymake_build_project(BuildOptions *boptions) {
 	ez_free(command);
 }
 
+int
+parse_user_value(JsonValue *root, String key, int required)
+{
+	char data[128];
+	int awaiting_input = 1;
+	
+	while (awaiting_input) {
+		if (!required) {
+			awaiting_input = 0;
+		}
+		
+		fgets(data, 128, stdin);
+		
+		if (ez_strlen(data) > 1) {
+			awaiting_input = 0;
+			
+			JsonValue *value = (JsonValue *)ez_alloc(sizeof(JsonValue));
+			
+			value->key = ez_strdup(key);
+			value->value_type = JSON_TYPE_STRING;
+			value->values_count = 0;
+			value->values = NULL;
+			
+			if (root->values == NULL) {
+				root->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+				root->values_count = 1;
+			} else {
+				root->values = (JsonValue **)ez_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
+				root->values_count++;
+			}
+			
+			int length = ez_strlen(data) + 1;
+			value->string_value = (String)ez_alloc(sizeof(char) * length);
+			
+			ez_strcpy(value->string_value, data);
+			value->string_value[length - 1] = '\0';
+			
+			root->values[root->values_count - 1] = value;
+		} else {
+			if (required) {
+				printf("\nplease specify a value, or press CTRL + C to cancel: ");
+			} else {
+				return 0;
+			}
+		}
+	}
+	
+	return 1;
+}
+
+int
+parse_user_values(JsonValue *root, String key)
+{
+	char data[128];
+	fgets(data, 128, stdin);
+	
+	if (ez_strlen(data) > 1) {
+		JsonValue *value = (JsonValue *)ez_alloc(sizeof(JsonValue));
+		
+		value->key = ez_strdup(key);
+		value->value_type = JSON_TYPE_ARRAY;
+		value->string_value = NULL;
+		value->values_count = 0;
+		value->values = NULL;
+		
+		if (root->values == NULL) {
+			root->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+			root->values_count = 1;
+		} else {
+			root->values = (JsonValue **)ez_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
+			root->values_count++;
+		}
+		
+		while (ez_strlen(data) > 1) {
+			JsonValue *arrvalue = (JsonValue *)ez_alloc(sizeof(JsonValue));
+			
+			arrvalue->value_type = JSON_TYPE_NOVALUE;
+			arrvalue->string_value = NULL;
+			arrvalue->values_count = 0;
+			arrvalue->values = NULL;
+			
+			if (value->values == NULL) {
+				value->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+				value->values_count = 1;
+			} else {
+				value->values = (JsonValue **)ez_realloc(value->values, sizeof(JsonValue *) * (value->values_count + 1));
+				value->values_count++;
+			}
+			
+			int length = ez_strlen(data) + 1;
+			arrvalue->key = (String)ez_alloc(sizeof(char) * length);
+			
+			ez_strcpy(arrvalue->key, data);
+			arrvalue->key[length - 1] = '\0';
+			
+			value->values[value->values_count - 1] = arrvalue;
+			
+			fgets(data, 128, stdin);
+		}
+		
+		root->values[root->values_count - 1] = value;
+	} else {
+		return 0;
+	}
+	
+	return 1;
+}
+
+void
+parse_user_options(JsonValue *root)
+{
+	int current_question = 1;
+	
+	while (current_question > 0) {
+		switch (current_question) {
+			case 1: {
+				printf("question: compiler (none): ");
+				parse_user_value(root, "compiler", 0);
+				current_question++;
+				
+				break;
+			}
+			case 2: {
+				printf("question: output (none): ");
+				parse_user_value(root, "output", 0);
+				current_question++;
+				
+				break;
+			}
+			case 3: {
+				printf("question: sources (none):\n");
+				parse_user_values(root, "sources");
+				current_question++;
+				
+				break;
+			}
+			case 4: {
+				printf("question: includes (none):\n");
+				parse_user_values(root, "includes");
+				current_question++;
+				
+				break;
+			}
+			case 5: {
+				printf("question: libraries (none):\n");
+				parse_user_values(root, "libraries");
+				current_question++;
+				
+				break;
+			}
+			case 6: {
+				printf("question: compiler options (none):\n");
+				parse_user_values(root, "compiler_options");
+				current_question = 0;
+				
+				break;
+			}
+		}
+	}
+}
+
+int
+init(void)
+{
+	JsonValue *root = (JsonValue *)ez_alloc(sizeof(JsonValue));
+	
+	root->key = NULL;
+	root->value_type = JSON_TYPE_OBJECT;
+	root->string_value = NULL;
+	root->values_count = 0;
+	root->values = NULL;
+	
+	printf("question: project name (*): ");
+	parse_user_value(root, "project", 1);
+	
+	parse_user_options(root);
+	
+	printf("question: create target? (y/n): ");
+	char result = fgetc(stdin);
+	fflush(stdin);
+	
+	JsonValue *targets;
+	
+	if (result == 'Y' || result == 'y') {
+		targets = (JsonValue *)ez_alloc(sizeof(JsonValue));
+		
+		targets->key = ez_strdup("targets");
+		targets->value_type = JSON_TYPE_OBJECT;
+		targets->string_value = NULL;
+		targets->values_count = 0;
+		targets->values = NULL;
+		
+		if (root->values == NULL) {
+			root->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+			root->values_count = 1;
+		} else {
+			root->values = (JsonValue **)ez_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
+			root->values_count++;
+		}
+		
+		root->values[root->values_count - 1] = targets;
+	}
+	
+	while (result == 'Y' || result == 'y') {
+		JsonValue *target = (JsonValue *)ez_alloc(sizeof(JsonValue));
+		
+		printf("question: target name (*): ");
+		
+		char data[128];
+		
+		while (1) {
+			fgets(data, 128, stdin);
+			
+			if (ez_strlen(data) > 1) {
+				break;
+			} else {
+				printf("\nplease specify a value, or press CTRL + C to cancel: ");
+			}
+		}
+		
+		target->key = ez_strdup(data);
+		target->value_type = JSON_TYPE_OBJECT;
+		target->string_value = NULL;
+		target->values_count = 0;
+		target->values = NULL;
+		
+		parse_user_options(target);
+		
+		if (targets->values == NULL) {
+			targets->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+			targets->values_count = 1;
+		} else {
+			targets->values = (JsonValue **)ez_realloc(targets->values, sizeof(JsonValue *) * (targets->values_count + 1));
+			targets->values_count++;
+		}
+		
+		targets->values[targets->values_count - 1] = target;
+		
+		printf("question: create target? (y/n): ");
+		result = fgetc(stdin);
+		fflush(stdin);
+	}
+	
+	/* @TODO implement ezjson_decompile */
+	/*
+	 * Then do
+	 * String json = ezjson_decompile(root);
+	 * ... output that json into a build file ...
+	 */
+	
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	char *file = "build.ezmk", *target = NULL;
@@ -251,6 +504,8 @@ int main(int argc, char *argv[])
 				if (i + 1 < argc) {
 					file = argv[i + 1];
 				}
+			} else if (ez_strcmp(arg, "init")) {
+				return init();
 			} else {
 				target = argv[i];
 			}

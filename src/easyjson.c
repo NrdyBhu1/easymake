@@ -211,3 +211,33 @@ ezjson_compile(char *json)
 	
 	return container;
 }
+
+char *
+ezjson_decompile(JsonValue *value)
+{
+	/*
+	 * This function needs to take in a JsonValue
+	 * and basically branch through it and generate
+	 * clean json.
+	 */
+	 
+	 if (value->value_type != JSON_TYPE_OBJECT) {
+	 	return NULL;
+	 }
+	 
+	 int i;
+	 for (i = 0; i < value->values_count; i++) {
+	 	
+	 }
+}
+
+void
+ezjson_free(JsonValue *value)
+{
+	/*
+	 * This function just needs to branch
+	 * through the JsonValue and free everything
+	 * that is allocated with ez_alloc. I'll implement
+	 * this function unless you really want to do it.
+	 */
+}

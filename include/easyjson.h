@@ -41,6 +41,7 @@ typedef struct json_value JsonValue;
 
 /* Function Declarations */
 JsonValue *ezjson_compile(char *json);
-char *ezjson_decompile(JsonValue value);
+char *ezjson_decompile(JsonValue *value);
+void ezjson_free(JsonValue *value);
 
 #endif
