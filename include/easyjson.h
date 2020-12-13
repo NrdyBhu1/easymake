@@ -40,7 +40,7 @@ struct json_value {
 typedef struct json_value JsonValue;
 
 /* Function Declarations */
-// Decompile from file, Compile to file
+/* Decompile = from file, Compile = to file */
 JsonValue *ezjson_decompile(char *json);
 char *ezjson_compile(JsonValue *value);
 void ezjson_free(JsonValue *value);

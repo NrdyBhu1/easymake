@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 float VERSION = 0.2;
-int EXIT_CODE = 0, EXIT_AFTER_PREP_BLDOPTS = 0;
+int EXIT_CODE = 0, SKIP_NEXT_STEP = 0;
 
 char *
 easymake_read_file(char *file_path)
@@ -30,12 +30,22 @@ easymake_read_file(char *file_path)
 	text[read_count] = '\0';
 
 	fclose(file);
-	return text;
+
+	/* Build file has to be atleast `{}\0` */
+	if(length >= 3) {
+		return text;
+	} else {
+		SKIP_NEXT_STEP = 1;
+		return NULL;
+	}
 }
 
 void
 apply_build_options(BuildOptions *boptions, JsonValue *object)
 {
+	if(SKIP_NEXT_STEP) return;
+
+
 	int i;
 	for (i = 0; i < object->values_count; i++) {
 		JsonValue *val = object->values[i];
@@ -120,6 +130,8 @@ easymake_build_options(char *buf, char *target)
 {
 	BuildOptions boptions;
 
+	if(SKIP_NEXT_STEP) return boptions;
+
 	boptions.project = NULL;
 	boptions.compiler = NULL;
 	boptions.output = NULL;
@@ -135,13 +147,13 @@ easymake_build_options(char *buf, char *target)
 	boptions.library_dirs_count = 0;
 	boptions.compiler_options_count = 0;
 
-	JsonValue *json = ezjson_compile(buf);
+	JsonValue *json = ezjson_decompile(buf);
 
 	if (json->values[0]->values_count < 1) {
 		printf("easymake: error: invalid build file\n");
 
 		EXIT_CODE = 6;
-		EXIT_AFTER_PREP_BLDOPTS = 1;
+		SKIP_NEXT_STEP = 1;
 
 		return boptions;
 	}
@@ -176,7 +188,7 @@ easymake_build_options(char *buf, char *target)
 		}
 	}
 
-	//ezjson_free(json);
+	ezjson_free(json);
 
 	return boptions;
 }
@@ -184,7 +196,7 @@ easymake_build_options(char *buf, char *target)
 void
 easymake_build_project(BuildOptions *boptions)
 {
-	if (EXIT_AFTER_PREP_BLDOPTS) return;
+	if (SKIP_NEXT_STEP) return;
 
 	char *command = "";
 
@@ -496,10 +508,10 @@ init(void)
 		fflush(stdin);
 	}
 
-	/* @TODO implement ezjson_decompile */
+	/* @TODO implement ezjson_compile */
 	/*
 	 * Then do
-	 * String json = ezjson_decompile(root);
+	 * String json = ezjson_compile(root);
 	 * ... output that json into a build file ...
 	 */
 
