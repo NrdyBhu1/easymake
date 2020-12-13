@@ -8,7 +8,7 @@ Download the latest version from the releases tab, or build from source (check C
 
 ## Usage
 
-`$ easymake YOUR_BUILD_FILE`
+`$ easymake [... options ...] <target>`
 
 ## Contributing
 
