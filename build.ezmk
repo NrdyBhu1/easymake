@@ -7,7 +7,9 @@
 	],
 	
 	"sources": [
-		"src/*.c"
+		"src/easyjson.c"
+		"src/easylib.c",
+		"src/easymake.c",
 	],
 	
 	"default_target": "gcc-debug",
@@ -20,7 +22,8 @@
 			
 			"compiler_options": [
 				"-ggdb",
-				"-Og"
+				"-Og",
+				"-fsanitize=address"
 			]
 		},
 		"gcc-release": {
@@ -28,7 +31,8 @@
 			
 			"compiler_options": [
 				"-s",
-				"-O3"
+				"-O3",
+				"-static"
 			]
 		},
 		"clang-debug": {

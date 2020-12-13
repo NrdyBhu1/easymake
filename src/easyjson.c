@@ -25,7 +25,7 @@
 
 /* Function Definitions */
 JsonValue *
-ezjson_compile(char *json)
+ezjson_decompile(char *json)
 {
 	String buffer = ez_strtrm(json, " \n");
 	int length = ez_strlen(buffer);
@@ -213,22 +213,22 @@ ezjson_compile(char *json)
 }
 
 char *
-ezjson_decompile(JsonValue *value)
+ezjson_compile(JsonValue *value)
 {
 	/*
 	 * This function needs to take in a JsonValue
 	 * and basically branch through it and generate
 	 * clean json.
-	 */
+	*/
 
-	 if (value->value_type != JSON_TYPE_OBJECT) {
-	 	return NULL;
-	 }
+	if (value->value_type != JSON_TYPE_OBJECT) {
+		return NULL;
+	}
 
-	 int i;
-	 for (i = 0; i < value->values_count; i++) {
+	int i;
+	for (i = 0; i < value->values_count; i++) {
 
-	 }
+	}
 }
 
 void
