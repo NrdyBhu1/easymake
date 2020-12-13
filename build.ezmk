@@ -7,31 +7,23 @@
 	],
 	
 	"sources": [
-		"src/*.c"
+		"src/easyjson.c"
+		"src/easylib.c",
+		"src/easymake.c",
 	],
 	
 	"default_target": "gcc-debug",
 	"targets": [
 		"tcc-debug": {
 			"compiler": "tcc",
-			
-			"compiler_options": [
-				"-Og"
-			]
-		},
-		"tcc-release": {
-			"compiler": "tcc",
-			
-			"compiler_options": [
-				"-O3"
-			]
 		},
 		"gcc-debug": {
 			"compiler": "gcc",
 			
 			"compiler_options": [
 				"-ggdb",
-				"-Og"
+				"-Og",
+				"-fsanitize=address"
 			]
 		},
 		"gcc-release": {
@@ -39,7 +31,8 @@
 			
 			"compiler_options": [
 				"-s",
-				"-O3"
+				"-O3",
+				"-static"
 			]
 		},
 		"clang-debug": {
