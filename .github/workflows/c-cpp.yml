@@ -14,8 +14,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: make
-      run: gcc src/*.c -Iinclude -s -Og -ggdb -o easymake
+      run: gcc src/*.c -Iinclude -s -Og -ggdb -o easymake-gdb-x86_64
     - uses: actions/upload-artifact@v2
       with:
-        name: easymake
-        path: easymake
+        name: easymake-gdb-x86_64
+        path: easymake-gdb-x86_64
