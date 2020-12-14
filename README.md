@@ -28,4 +28,4 @@ Thanks to everyone in the Cleanware organization, and everyone who contributed.
 
 ## License
 
-[GPL v3](https://gitea.com/undersquire/easymake/raw/branch/main/LICENSE)
+[GPL v3](https://github.com/Cleanware/easymake/blob/main/LICENSE)
