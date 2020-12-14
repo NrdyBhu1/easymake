@@ -107,13 +107,13 @@ c_alloc(int size)
 void *
 c_realloc(void *ptr, int size)
 {
-	if (ez_onheap(ptr)) {
-		void *new_ptr = ez_alloc(size);
+	if (c_onheap(ptr)) {
+		void *new_ptr = c_alloc(size);
 
 		if (new_ptr) {
-			ez_memcpy(new_ptr, ptr, size);
+			c_memcpy(new_ptr, ptr, size);
 
-			ez_free(ptr);
+			c_free(ptr);
 
 			return new_ptr;
 		} else {
@@ -127,7 +127,7 @@ c_realloc(void *ptr, int size)
 void
 c_free(void *ptr)
 {
-	if (ez_onheap(ptr)) {
+	if (c_onheap(ptr)) {
 		Block *current = ptr;
 		current--;
 
@@ -140,7 +140,7 @@ c_free(void *ptr)
 int
 c_memsize(void *ptr)
 {
-	if (ez_onheap(ptr)) {
+	if (c_onheap(ptr)) {
 		Block *current = ptr;
 		current--;
 

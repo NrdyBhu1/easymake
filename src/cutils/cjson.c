@@ -286,7 +286,7 @@ cjson_generate(JsonValue *value)
 }
 
 void
-cjson_c_free(JsonValue *value)
+cjson_free(JsonValue *value)
 {
 	if (value->values != NULL) {
 		int i;
@@ -294,7 +294,7 @@ cjson_c_free(JsonValue *value)
 			JsonValue *arrval = value->values[i];
 
 			if (arrval != NULL) {
-				ezjson_c_free(arrval);
+				cjson_free(arrval);
 			}
 		}
 
