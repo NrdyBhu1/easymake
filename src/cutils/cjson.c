@@ -1,9 +1,9 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2020 EasySoft
+ * Copyright (c) 2020 Cleanware
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+ * Permission is hereby granted, c_free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use, copy, modify, merge, publish,
  * distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
@@ -20,17 +20,18 @@
  */
 
 /* Includes */
-#include "easyjson.h"
-#include "easylib.h"
+#include "cjson.h"
+#include "cmemory.h"
+#include "cstring.h"
 
 /* Function Definitions */
 JsonValue *
-ezjson_decompile(char *json)
+cjson_parse(char *json)
 {
-	String buffer = ez_fstrtrm(json, " \n");
-	int length = ez_strlen(buffer);
+	String buffer = cstr_ftrim(json, " \n");
+	int length = cstr_length(buffer);
 
-	JsonValue *container = (JsonValue *)ez_alloc(sizeof(JsonValue));
+	JsonValue *container = (JsonValue *)c_alloc(sizeof(JsonValue));
 
 	container->key = NULL;
 	container->value_type = JSON_TYPE_OBJECT;
@@ -39,11 +40,11 @@ ezjson_decompile(char *json)
 	container->values = NULL;
 
 	int count = 1;
-	JsonValue **values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+	JsonValue **values = (JsonValue **)c_alloc(sizeof(JsonValue *));
 
 	values[count - 1] = container;
 
-	String storage = (String)ez_alloc(sizeof(char));
+	String storage = (String)c_alloc(sizeof(char));
 	storage[0] = '\0';
 
 	int i, j = 0;
@@ -53,15 +54,15 @@ ezjson_decompile(char *json)
 		switch (c) {
 			case '{':
 			case '[': {
-				JsonValue *value = (JsonValue *)ez_alloc(sizeof(JsonValue));
+				JsonValue *value = (JsonValue *)c_alloc(sizeof(JsonValue));
 
 				if (c == '{') value->value_type = JSON_TYPE_OBJECT;
 				if (c == '[') value->value_type = JSON_TYPE_ARRAY;
 
-				if (ez_strlen(storage) > 0) {
-					value->key = ez_strdup(storage);
+				if (cstr_length(storage) > 0) {
+					value->key = cstr_dupe(storage);
 
-					storage = (String)ez_realloc(storage, sizeof(char));
+					storage = (String)c_realloc(storage, sizeof(char));
 					storage[0] = '\0';
 				} else {
 					value->key = NULL;
@@ -72,15 +73,15 @@ ezjson_decompile(char *json)
 				value->values = NULL;
 
 				if (values[count - 1]->values == NULL) {
-					values[count - 1]->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+					values[count - 1]->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
 				} else {
-					values[count - 1]->values = (JsonValue **)ez_realloc(values[count - 1]->values, sizeof(JsonValue *) * (values[count - 1]->values_count + 1));
+					values[count - 1]->values = (JsonValue **)c_realloc(values[count - 1]->values, sizeof(JsonValue *) * (values[count - 1]->values_count + 1));
 				}
 
 				values[count - 1]->values_count++;
 				values[count - 1]->values[values[count - 1]->values_count - 1] = value;
 
-				values = (JsonValue **)ez_realloc(values, sizeof(JsonValue *) * (count + 1));
+				values = (JsonValue **)c_realloc(values, sizeof(JsonValue *) * (count + 1));
 
 				count++;
 				values[count - 1] = value;
@@ -89,7 +90,7 @@ ezjson_decompile(char *json)
 			}
 			case ']':
 			case '}': {
-				values = (JsonValue **)ez_realloc(values, sizeof(JsonValue *) * (count - 1));
+				values = (JsonValue **)c_realloc(values, sizeof(JsonValue *) * (count - 1));
 				count--;
 
 				break;
@@ -103,14 +104,14 @@ ezjson_decompile(char *json)
 						if (buffer[i + 1] != ':') {
 							j = 0;
 
-							JsonValue *value = (JsonValue *)ez_alloc(sizeof(JsonValue));
+							JsonValue *value = (JsonValue *)c_alloc(sizeof(JsonValue));
 
 							value->value_type = JSON_TYPE_NOVALUE;
 
-							if(ez_strlen(storage) > 0) {
-								value->key = ez_strdup(storage);
+							if(cstr_length(storage) > 0) {
+								value->key = cstr_dupe(storage);
 
-								storage = (String)ez_realloc(storage, sizeof(char));
+								storage = (String)c_realloc(storage, sizeof(char));
 								storage[0] = '\0';
 							} else {
 								value->key = NULL;
@@ -121,9 +122,9 @@ ezjson_decompile(char *json)
 							value->values = NULL;
 
 							if (values[count - 1]->values == NULL) {
-								values[count - 1]->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+								values[count - 1]->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
 							} else {
-								values[count - 1]->values = (JsonValue **)ez_realloc(values[count - 1]->values, sizeof(JsonValue *) * (values[count - 1]->values_count + 1));
+								values[count - 1]->values = (JsonValue **)c_realloc(values[count - 1]->values, sizeof(JsonValue *) * (values[count - 1]->values_count + 1));
 							}
 
 							values[count - 1]->values_count++;
@@ -131,14 +132,14 @@ ezjson_decompile(char *json)
 						} else {
 							if (i + 2 < length) {
 								if (buffer[i + 2] != '{' && buffer[i + 2] != '[') {
-									JsonValue *value = (JsonValue *)ez_alloc(sizeof(JsonValue));
+									JsonValue *value = (JsonValue *)c_alloc(sizeof(JsonValue));
 
 									value->value_type = JSON_TYPE_STRING;
 
-									if(ez_strlen(storage) > 0) {
-										value->key = ez_strdup(storage);
+									if(cstr_length(storage) > 0) {
+										value->key = cstr_dupe(storage);
 
-										storage = (String)ez_realloc(storage, sizeof(char));
+										storage = (String)c_realloc(storage, sizeof(char));
 										storage[0] = '\0';
 									} else {
 										value->key = NULL;
@@ -149,15 +150,15 @@ ezjson_decompile(char *json)
 									value->values = NULL;
 
 									if (values[count - 1]->values == NULL) {
-										values[count - 1]->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+										values[count - 1]->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
 									} else {
-										values[count - 1]->values = (JsonValue **)ez_realloc(values[count - 1]->values, sizeof(JsonValue *) * (values[count - 1]->values_count + 1));
+										values[count - 1]->values = (JsonValue **)c_realloc(values[count - 1]->values, sizeof(JsonValue *) * (values[count - 1]->values_count + 1));
 									}
 
 									values[count - 1]->values_count++;
 									values[count - 1]->values[values[count - 1]->values_count - 1] = value;
 
-									values = (JsonValue **)ez_realloc(values, sizeof(JsonValue *) * (count + 1));
+									values = (JsonValue **)c_realloc(values, sizeof(JsonValue *) * (count + 1));
 
 									count++;
 									values[count - 1] = value;
@@ -174,16 +175,16 @@ ezjson_decompile(char *json)
 				} else if (j == 3) {
 					j = 4;
 				} else if (j == 4) {
-					if (ez_strlen(storage) > 0) {
-						values[count - 1]->string_value = ez_strdup(storage);
+					if (cstr_length(storage) > 0) {
+						values[count - 1]->string_value = cstr_dupe(storage);
 
-						storage = (String)ez_realloc(storage, sizeof(char));
+						storage = (String)c_realloc(storage, sizeof(char));
 						storage[0] = '\0';
 					} else {
 						values[count - 1]->string_value = NULL;
 					}
 
-					values = (JsonValue **)ez_realloc(values, sizeof(JsonValue *) * (count - 1));
+					values = (JsonValue **)c_realloc(values, sizeof(JsonValue *) * (count - 1));
 					count--;
 
 					j = 0;
@@ -192,8 +193,8 @@ ezjson_decompile(char *json)
 			}
 			default: {
 				if(j == 1 || j == 4) {
-					int storage_length = ez_strlen(storage) + 1;
-					storage = (String)ez_realloc(storage, sizeof(char) * (storage_length + 1));
+					int storage_length = cstr_length(storage) + 1;
+					storage = (String)c_realloc(storage, sizeof(char) * (storage_length + 1));
 
 					storage[storage_length - 1] = c;
 					storage[storage_length] = '\0';
@@ -203,11 +204,11 @@ ezjson_decompile(char *json)
 		}
 	}
 
-	ez_free(buffer);
-	ez_free(storage);
+	c_free(buffer);
+	c_free(storage);
 
-	values = ez_realloc(values, 1);
-	ez_free(values);
+	values = c_realloc(values, 1);
+	c_free(values);
 
 	return container;
 }
@@ -217,16 +218,16 @@ gen_json(char **json, int index, JsonValue *value)
 {
 	if (value->value_type == JSON_TYPE_OBJECT || value->value_type == JSON_TYPE_ARRAY) {
 		int i;
-		for (i = 0; i < index; i++) *json = ez_fstrcat(*json, "	");
+		for (i = 0; i < index; i++) *json = cstr_fconcat(*json, "	");
 
 		if (value->key != NULL) {
-			*json = ez_fstrcat(*json, "\"");
-			*json = ez_fstrcat(*json, value->key);
-			*json = ez_fstrcat(*json, "\": ");
+			*json = cstr_fconcat(*json, "\"");
+			*json = cstr_fconcat(*json, value->key);
+			*json = cstr_fconcat(*json, "\": ");
 		}
 
-		if (value->value_type == JSON_TYPE_OBJECT) *json = ez_fstrcat(*json, "{\n");
-		else if (value->value_type == JSON_TYPE_ARRAY) *json = ez_fstrcat(*json, "[\n");
+		if (value->value_type == JSON_TYPE_OBJECT) *json = cstr_fconcat(*json, "{\n");
+		else if (value->value_type == JSON_TYPE_ARRAY) *json = cstr_fconcat(*json, "[\n");
 
 		for (i = 0; i < value->values_count; i++) {
 			JsonValue *arrval = value->values[i];
@@ -234,49 +235,49 @@ gen_json(char **json, int index, JsonValue *value)
 			gen_json(json, index + 1, arrval);
 
 			if (i + 1 < value->values_count) {
-				*json = ez_fstrcat(*json, ",\n");
+				*json = cstr_fconcat(*json, ",\n");
 			} else {
-				*json = ez_fstrcat(*json, "\n");
+				*json = cstr_fconcat(*json, "\n");
 			}
 		}
 
-		for (i = 0; i < index; i++) *json = ez_fstrcat(*json, "	");
+		for (i = 0; i < index; i++) *json = cstr_fconcat(*json, "	");
 
-		if (value->value_type == JSON_TYPE_OBJECT) *json = ez_fstrcat(*json, "}");
-		else if (value->value_type == JSON_TYPE_ARRAY) *json = ez_fstrcat(*json, "]");
+		if (value->value_type == JSON_TYPE_OBJECT) *json = cstr_fconcat(*json, "}");
+		else if (value->value_type == JSON_TYPE_ARRAY) *json = cstr_fconcat(*json, "]");
 	} else {
 		if (value->value_type == JSON_TYPE_STRING) {
 			int i;
-			for (i = 0; i < index; i++) *json = ez_fstrcat(*json, "	");
+			for (i = 0; i < index; i++) *json = cstr_fconcat(*json, "	");
 
 			if (value->key != NULL) {
-				*json = ez_fstrcat(*json, "\"");
-				*json = ez_fstrcat(*json, value->key);
-				*json = ez_fstrcat(*json, "\": \"");
+				*json = cstr_fconcat(*json, "\"");
+				*json = cstr_fconcat(*json, value->key);
+				*json = cstr_fconcat(*json, "\": \"");
 			}
 
 			if (value->string_value != NULL) {
-				*json = ez_fstrcat(*json, value->string_value);
+				*json = cstr_fconcat(*json, value->string_value);
 			}
 
-			*json = ez_fstrcat(*json, "\"");
+			*json = cstr_fconcat(*json, "\"");
 		} else if (value->value_type == JSON_TYPE_NOVALUE) {
 			int i;
-			for (i = 0; i < index; i++) *json = ez_fstrcat(*json, "	");
+			for (i = 0; i < index; i++) *json = cstr_fconcat(*json, "	");
 
 			if (value->key != NULL) {
-				*json = ez_fstrcat(*json, "\"");
-				*json = ez_fstrcat(*json, value->key);
-				*json = ez_fstrcat(*json, "\"");
+				*json = cstr_fconcat(*json, "\"");
+				*json = cstr_fconcat(*json, value->key);
+				*json = cstr_fconcat(*json, "\"");
 			}
 		}
 	}
 }
 
 char *
-ezjson_compile(JsonValue *value)
+cjson_generate(JsonValue *value)
 {
-	char *json = (char *)ez_alloc(sizeof(char));
+	char *json = (char *)c_alloc(sizeof(char));
 	json[0] = '\0';
 
 	gen_json(&json, 0, value);
@@ -285,7 +286,7 @@ ezjson_compile(JsonValue *value)
 }
 
 void
-ezjson_free(JsonValue *value)
+cjson_c_free(JsonValue *value)
 {
 	if (value->values != NULL) {
 		int i;
@@ -293,20 +294,20 @@ ezjson_free(JsonValue *value)
 			JsonValue *arrval = value->values[i];
 
 			if (arrval != NULL) {
-				ezjson_free(arrval);
+				ezjson_c_free(arrval);
 			}
 		}
 
-		ez_free(value->values);
+		c_free(value->values);
 	}
 
 	if (value->key != NULL) {
-		ez_free(value->key);
+		c_free(value->key);
 	}
 
 	if (value->string_value != NULL) {
-		ez_free(value->string_value);
+		c_free(value->string_value);
 	}
 
-	ez_free(value);
+	c_free(value);
 }

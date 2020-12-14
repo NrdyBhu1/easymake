@@ -2,10 +2,12 @@
 	"project": "easymake",
 	"output": "easymake",
 	"sources": [
-		"src/*.c"
+		"src/*.c",
+		"src/cutils/*.c"
 	],
 	"includes": [
-		"include"
+		"include",
+		"include/cutils"
 	],
 	"default_target": "gcc-debug",
 	"targets": {

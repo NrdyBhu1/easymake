@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2020 EasySoft
+ * Copyright (c) 2020 Cleanware
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the "Software"), to deal in the Software without
@@ -19,36 +19,29 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef EASYLIB_H
-#define EASYLIB_H
-
-#define HEAP_SIZE (1024 * 1024) /* 1 MB */
-
-#ifndef NULL
-	#define NULL (void *)0
-#endif
+#ifndef CJSON_H
+#define CJSON_H
 
 /* Types */
-typedef char * String;
+enum {
+	JSON_TYPE_NOVALUE,
+	JSON_TYPE_STRING,
+	JSON_TYPE_OBJECT,
+	JSON_TYPE_ARRAY
+};
+
+struct json_value {
+	char *key;
+	int value_type;
+	char *string_value;
+	int values_count;
+	struct json_value **values;
+};
+typedef struct json_value JsonValue;
 
 /* Function Declarations */
-void *ez_alloc(int);
-void *ez_realloc(void *, int);
-void ez_free(void *);
-int ez_memsize(void *);
-void ez_memcpy(void *, void *, int);
-int ez_memuse(void);
-int ez_onheap(void *);
-int ez_talloc(void);
-int ez_strlen(String);
-int ez_strcmp(String, String);
-void ez_strcpy(String, String);
-String ez_strdup(String);
-String ez_strcat(String, String);
-String ez_fstrcat(String, String);
-String ez_strcut(String, int);
-String ez_fstrcut(String, int);
-String ez_strtrm(String, String);
-String ez_fstrtrm(String, String);
+JsonValue *cjson_parse(char *json);
+char *cjson_generate(JsonValue *value);
+void cjson_free(JsonValue *value);
 
 #endif

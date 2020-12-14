@@ -1,6 +1,7 @@
 #include "easymake.h"
-#include "easylib.h"
-#include "easyjson.h"
+#include "cmemory.h"
+#include "cstring.h"
+#include "cjson.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -24,7 +25,7 @@ easymake_read_file(char *file_path)
 	long length = ftell(file);
 	rewind(file);
 
-	char *text = (char *)ez_alloc(length + 1);
+	char *text = (char *)c_alloc(length + 1);
 
 	size_t read_count = fread(text, 1, length, file);
 	text[read_count] = '\0';
@@ -49,73 +50,73 @@ apply_build_options(BuildOptions *boptions, JsonValue *object)
 	for (i = 0; i < object->values_count; i++) {
 		JsonValue *val = object->values[i];
 
-		if (ez_strcmp(val->key, "project")) {
+		if (cstr_compare(val->key, "project")) {
 			if (val->value_type == JSON_TYPE_STRING) {
-				boptions->project = ez_strdup(val->string_value);
+				boptions->project = cstr_dupe(val->string_value);
 			}
-		} else if (ez_strcmp(val->key, "compiler")) {
+		} else if (cstr_compare(val->key, "compiler")) {
 			if (val->value_type == JSON_TYPE_STRING) {
-				boptions->compiler = ez_strdup(val->string_value);
+				boptions->compiler = cstr_dupe(val->string_value);
 			}
-		} else if (ez_strcmp(val->key, "output")) {
+		} else if (cstr_compare(val->key, "output")) {
 			if (val->value_type == JSON_TYPE_STRING) {
-				boptions->output = ez_strdup(val->string_value);
+				boptions->output = cstr_dupe(val->string_value);
 			}
-		} else if (ez_strcmp(val->key, "default_target")) {
+		} else if (cstr_compare(val->key, "default_target")) {
 			if(val->value_type == JSON_TYPE_STRING) {
-				boptions->default_target = ez_strdup(val->string_value);
+				boptions->default_target = cstr_dupe(val->string_value);
 			}
-		} else if (ez_strcmp(val->key, "sources")) {
+		} else if (cstr_compare(val->key, "sources")) {
 			if (val->value_type == JSON_TYPE_ARRAY) {
-				boptions->sources = (char **)ez_alloc(sizeof(char *) * val->values_count);
+				boptions->sources = (char **)c_alloc(sizeof(char *) * val->values_count);
 
 				int i;
 				for (i = 0; i < val->values_count; i++) {
-					boptions->sources[i] = ez_strdup(val->values[i]->key);
+					boptions->sources[i] = cstr_dupe(val->values[i]->key);
 				}
 
 				boptions->sources_count = val->values_count;
 			}
-		} else if (ez_strcmp(val->key, "includes")) {
+		} else if (cstr_compare(val->key, "includes")) {
 			if (val->value_type == JSON_TYPE_ARRAY) {
-				boptions->includes = (char **)ez_alloc(sizeof(char *) * val->values_count);
+				boptions->includes = (char **)c_alloc(sizeof(char *) * val->values_count);
 
 				int i;
 				for (i = 0; i < val->values_count; i++) {
-					boptions->includes[i] = ez_strdup(val->values[i]->key);
+					boptions->includes[i] = cstr_dupe(val->values[i]->key);
 				}
 
 				boptions->includes_count = val->values_count;
 			}
-		} else if (ez_strcmp(val->key, "libraries")) {
+		} else if (cstr_compare(val->key, "libraries")) {
 			if (val->value_type == JSON_TYPE_ARRAY) {
-				boptions->libraries = (char **)ez_alloc(sizeof(char *) * val->values_count);
+				boptions->libraries = (char **)c_alloc(sizeof(char *) * val->values_count);
 
 				int i;
 				for (i = 0; i < val->values_count; i++) {
-					boptions->libraries[i] = ez_strdup(val->values[i]->key);
+					boptions->libraries[i] = cstr_dupe(val->values[i]->key);
 				}
 
 				boptions->libraries_count = val->values_count;
 			}
-		} else if (ez_strcmp(val->key, "library_dirs")) {
+		} else if (cstr_compare(val->key, "library_dirs")) {
 			if (val->value_type == JSON_TYPE_ARRAY) {
-				boptions->library_dirs = (char **)ez_alloc(sizeof(char *) * val->values_count);
+				boptions->library_dirs = (char **)c_alloc(sizeof(char *) * val->values_count);
 
 				int i;
 				for (i = 0; i < val->values_count; i++) {
-					boptions->library_dirs[i] = ez_strdup(val->values[i]->key);
+					boptions->library_dirs[i] = cstr_dupe(val->values[i]->key);
 				}
 
 				boptions->library_dirs_count = val->values_count;
 			}
-		} else if (ez_strcmp(val->key, "compiler_options")) {
+		} else if (cstr_compare(val->key, "compiler_options")) {
 			if (val->value_type == JSON_TYPE_ARRAY) {
-				boptions->compiler_options = (char **)ez_alloc(sizeof(char *) * val->values_count);
+				boptions->compiler_options = (char **)c_alloc(sizeof(char *) * val->values_count);
 
 				int i;
 				for (i = 0; i < val->values_count; i++) {
-					boptions->compiler_options[i] = ez_strdup(val->values[i]->key);
+					boptions->compiler_options[i] = cstr_dupe(val->values[i]->key);
 				}
 
 				boptions->compiler_options_count = val->values_count;
@@ -146,7 +147,7 @@ easymake_build_options(char *buf, char *target)
 	boptions.library_dirs_count = 0;
 	boptions.compiler_options_count = 0;
 
-	JsonValue *json = ezjson_decompile(buf);
+	JsonValue *json = cjson_parse(buf);
 
 	if (json->values[0]->values_count < 1) {
 		printf("easymake: error: invalid build file\n");
@@ -167,7 +168,7 @@ easymake_build_options(char *buf, char *target)
 
 	if (target == NULL) {
 		printf("easymake: error: no target specified\n");
-		ezjson_free(json);
+		cjson_free(json);
 
 		return boptions;
 	}
@@ -178,13 +179,13 @@ easymake_build_options(char *buf, char *target)
 	for (i = 0; i < object->values_count; i++) {
 		JsonValue *val = object->values[i];
 
-		if (ez_strcmp(val->key, "targets")) {
+		if (cstr_compare(val->key, "targets")) {
 			if (val->value_type == JSON_TYPE_ARRAY || val->value_type == JSON_TYPE_OBJECT) {
 				int j;
 				for (j = 0; j < val->values_count; j++) {
 					JsonValue *arrval = val->values[j];
 
-					if (ez_strcmp(arrval->key, target)) {
+					if (cstr_compare(arrval->key, target)) {
 						if (arrval->value_type == JSON_TYPE_OBJECT) {
 							apply_build_options(&boptions, val->values[j]);
 						}
@@ -194,7 +195,7 @@ easymake_build_options(char *buf, char *target)
 		}
 	}
 
-	ezjson_free(json);
+	cjson_free(json);
 
 	return boptions;
 }
@@ -213,19 +214,19 @@ easymake_build_project(BuildOptions *boptions)
 		return;
 	}
 
-	command = ez_strcat(command, boptions->compiler);
+	command = cstr_fconcat(command, boptions->compiler);
 
 	if (boptions->output) {
-		command = ez_fstrcat(command, " -o ");
-		command = ez_fstrcat(command, boptions->output);
+		command = cstr_fconcat(command, " -o ");
+		command = cstr_fconcat(command, boptions->output);
 	}
 
 	int i;
 
 	if (boptions->sources_count > 0) {
 		for (i = 0; i < boptions->sources_count; i++) {
-			command = ez_fstrcat(command, " ");
-			command = ez_fstrcat(command, boptions->sources[i]);
+			command = cstr_fconcat(command, " ");
+			command = cstr_fconcat(command, boptions->sources[i]);
 		}
 	} else {
 		printf("easymake: error: no source file(s) specified\n");
@@ -236,95 +237,95 @@ easymake_build_project(BuildOptions *boptions)
 
 	if (boptions->includes_count > 0) {
 		for (i = 0; i < boptions->includes_count; i++) {
-			command = ez_fstrcat(command, " -I");
-			command = ez_fstrcat(command, boptions->includes[i]);
+			command = cstr_fconcat(command, " -I");
+			command = cstr_fconcat(command, boptions->includes[i]);
 		}
 	}
 
 	if (boptions->library_dirs_count > 0) {
 		for (i = 0; i < boptions->library_dirs_count; i++) {
-			command = ez_fstrcat(command, " -L");
-			command = ez_fstrcat(command, boptions->library_dirs[i]);
+			command = cstr_fconcat(command, " -L");
+			command = cstr_fconcat(command, boptions->library_dirs[i]);
 		}
 	}
 
 	if (boptions->libraries_count > 0) {
 		for (i = 0; i < boptions->libraries_count; i++) {
-			command = ez_fstrcat(command, " -l");
-			command = ez_fstrcat(command, boptions->libraries[i]);
+			command = cstr_fconcat(command, " -l");
+			command = cstr_fconcat(command, boptions->libraries[i]);
 		}
 	}
 
 	if (boptions->compiler_options_count > 0) {
 		for (i = 0; i < boptions->compiler_options_count; i++) {
-			command = ez_fstrcat(command, " ");
-			command = ez_fstrcat(command, boptions->compiler_options[i]);
+			command = cstr_fconcat(command, " ");
+			command = cstr_fconcat(command, boptions->compiler_options[i]);
 		}
 	}
 
 	printf("easymake: executing: \'%s\'\n\n", command);
 
 	system(command);
-	ez_free(command);
+	c_free(command);
 
-	if (boptions->project != NULL) ez_free(boptions->project);
-	if (boptions->compiler != NULL) ez_free(boptions->compiler);
-	if (boptions->output != NULL) ez_free(boptions->output);
-	if (boptions->default_target != NULL) ez_free(boptions->default_target);
+	if (boptions->project != NULL) c_free(boptions->project);
+	if (boptions->compiler != NULL) c_free(boptions->compiler);
+	if (boptions->output != NULL) c_free(boptions->output);
+	if (boptions->default_target != NULL) c_free(boptions->default_target);
 
 	if (boptions->sources != NULL) {
 		int i;
 		for (i = 0; i < boptions->sources_count; i++) {
 			if (boptions->sources[i] != NULL) {
-				ez_free(boptions->sources[i]);
+				c_free(boptions->sources[i]);
 			}
 		}
 
-		ez_free(boptions->sources);
+		c_free(boptions->sources);
 	}
 
 	if (boptions->includes != NULL) {
 		int i;
 		for (i = 0; i < boptions->includes_count; i++) {
 			if (boptions->includes[i] != NULL) {
-				ez_free(boptions->includes[i]);
+				c_free(boptions->includes[i]);
 			}
 		}
 
-		ez_free(boptions->includes);
+		c_free(boptions->includes);
 	}
 
 	if (boptions->libraries != NULL) {
 		int i;
 		for (i = 0; i < boptions->libraries_count; i++) {
 			if (boptions->libraries[i] != NULL) {
-				ez_free(boptions->libraries[i]);
+				c_free(boptions->libraries[i]);
 			}
 		}
 
-		ez_free(boptions->libraries);
+		c_free(boptions->libraries);
 	}
 
 	if (boptions->library_dirs != NULL) {
 		int i;
 		for (i = 0; i < boptions->library_dirs_count; i++) {
 			if (boptions->library_dirs[i] != NULL) {
-				ez_free(boptions->library_dirs[i]);
+				c_free(boptions->library_dirs[i]);
 			}
 		}
 
-		ez_free(boptions->library_dirs);
+		c_free(boptions->library_dirs);
 	}
 
 	if (boptions->compiler_options != NULL) {
 		int i;
 		for (i = 0; i < boptions->compiler_options_count; i++) {
 			if (boptions->compiler_options[i] != NULL) {
-				ez_free(boptions->compiler_options[i]);
+				c_free(boptions->compiler_options[i]);
 			}
 		}
 
-		ez_free(boptions->compiler_options);
+		c_free(boptions->compiler_options);
 	}
 
 	printf("\neasymake: build process complete. check above for compiler errors\n");
@@ -343,34 +344,34 @@ parse_user_value(JsonValue *root, String key, int required)
 
 		fgets(data, 128, stdin);
 
-		if (ez_strlen(data) > 0) {
-			if (data[ez_strlen(data) - 1] == '\n') {
-				data[ez_strlen(data) - 1] = '\0';
+		if (cstr_length(data) > 0) {
+			if (data[cstr_length(data) - 1] == '\n') {
+				data[cstr_length(data) - 1] = '\0';
 			}
 		}
 
-		if (ez_strlen(data) > 0) {
+		if (cstr_length(data) > 0) {
 			awaiting_input = 0;
 
-			JsonValue *value = (JsonValue *)ez_alloc(sizeof(JsonValue));
+			JsonValue *value = (JsonValue *)c_alloc(sizeof(JsonValue));
 
-			value->key = ez_strdup(key);
+			value->key = cstr_dupe(key);
 			value->value_type = JSON_TYPE_STRING;
 			value->values_count = 0;
 			value->values = NULL;
 
 			if (root->values == NULL) {
-				root->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+				root->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
 				root->values_count = 1;
 			} else {
-				root->values = (JsonValue **)ez_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
+				root->values = (JsonValue **)c_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
 				root->values_count++;
 			}
 
-			int length = ez_strlen(data) + 1;
-			value->string_value = (String)ez_alloc(sizeof(char) * length);
+			int length = cstr_length(data) + 1;
+			value->string_value = (String)c_alloc(sizeof(char) * length);
 
-			ez_strcpy(value->string_value, data);
+			cstr_copy(value->string_value, data);
 			value->string_value[length - 1] = '\0';
 
 			root->values[root->values_count - 1] = value;
@@ -392,31 +393,31 @@ parse_user_values(JsonValue *root, String key)
 	char data[128];
 	fgets(data, 128, stdin);
 
-	if (ez_strlen(data) > 0) {
-		if (data[ez_strlen(data) - 1] == '\n') {
-			data[ez_strlen(data) - 1] = '\0';
+	if (cstr_length(data) > 0) {
+		if (data[cstr_length(data) - 1] == '\n') {
+			data[cstr_length(data) - 1] = '\0';
 		}
 	}
 
-	if (ez_strlen(data) > 0) {
-		JsonValue *value = (JsonValue *)ez_alloc(sizeof(JsonValue));
+	if (cstr_length(data) > 0) {
+		JsonValue *value = (JsonValue *)c_alloc(sizeof(JsonValue));
 
-		value->key = ez_strdup(key);
+		value->key = cstr_dupe(key);
 		value->value_type = JSON_TYPE_ARRAY;
 		value->string_value = NULL;
 		value->values_count = 0;
 		value->values = NULL;
 
 		if (root->values == NULL) {
-			root->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+			root->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
 			root->values_count = 1;
 		} else {
-			root->values = (JsonValue **)ez_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
+			root->values = (JsonValue **)c_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
 			root->values_count++;
 		}
 
-		while (ez_strlen(data) > 0) {
-			JsonValue *arrvalue = (JsonValue *)ez_alloc(sizeof(JsonValue));
+		while (cstr_length(data) > 0) {
+			JsonValue *arrvalue = (JsonValue *)c_alloc(sizeof(JsonValue));
 
 			arrvalue->value_type = JSON_TYPE_NOVALUE;
 			arrvalue->string_value = NULL;
@@ -424,26 +425,26 @@ parse_user_values(JsonValue *root, String key)
 			arrvalue->values = NULL;
 
 			if (value->values == NULL) {
-				value->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+				value->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
 				value->values_count = 1;
 			} else {
-				value->values = (JsonValue **)ez_realloc(value->values, sizeof(JsonValue *) * (value->values_count + 1));
+				value->values = (JsonValue **)c_realloc(value->values, sizeof(JsonValue *) * (value->values_count + 1));
 				value->values_count++;
 			}
 
-			int length = ez_strlen(data) + 1;
-			arrvalue->key = (String)ez_alloc(sizeof(char) * length);
+			int length = cstr_length(data) + 1;
+			arrvalue->key = (String)c_alloc(sizeof(char) * length);
 
-			ez_strcpy(arrvalue->key, data);
+			cstr_copy(arrvalue->key, data);
 			arrvalue->key[length - 1] = '\0';
 
 			value->values[value->values_count - 1] = arrvalue;
 
 			fgets(data, 128, stdin);
 
-			if (ez_strlen(data) > 0) {
-				if (data[ez_strlen(data) - 1] == '\n') {
-					data[ez_strlen(data) - 1] = '\0';
+			if (cstr_length(data) > 0) {
+				if (data[cstr_length(data) - 1] == '\n') {
+					data[cstr_length(data) - 1] = '\0';
 				}
 			}
 		}
@@ -512,7 +513,7 @@ parse_user_options(JsonValue *root)
 int
 init(void)
 {
-	JsonValue *root = (JsonValue *)ez_alloc(sizeof(JsonValue));
+	JsonValue *root = (JsonValue *)c_alloc(sizeof(JsonValue));
 
 	root->key = NULL;
 	root->value_type = JSON_TYPE_OBJECT;
@@ -532,19 +533,19 @@ init(void)
 	JsonValue *targets;
 
 	if (result == 'Y' || result == 'y') {
-		targets = (JsonValue *)ez_alloc(sizeof(JsonValue));
+		targets = (JsonValue *)c_alloc(sizeof(JsonValue));
 
-		targets->key = ez_strdup("targets");
+		targets->key = cstr_dupe("targets");
 		targets->value_type = JSON_TYPE_OBJECT;
 		targets->string_value = NULL;
 		targets->values_count = 0;
 		targets->values = NULL;
 
 		if (root->values == NULL) {
-			root->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+			root->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
 			root->values_count = 1;
 		} else {
-			root->values = (JsonValue **)ez_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
+			root->values = (JsonValue **)c_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
 			root->values_count++;
 		}
 
@@ -552,7 +553,7 @@ init(void)
 	}
 
 	while (result == 'Y' || result == 'y') {
-		JsonValue *target = (JsonValue *)ez_alloc(sizeof(JsonValue));
+		JsonValue *target = (JsonValue *)c_alloc(sizeof(JsonValue));
 
 		printf("question: target name (*): ");
 
@@ -561,20 +562,20 @@ init(void)
 		while (1) {
 			fgets(data, 128, stdin);
 
-			if (ez_strlen(data) > 0) {
-				if (data[ez_strlen(data) - 1] == '\n') {
-					data[ez_strlen(data) - 1] = '\0';
+			if (cstr_length(data) > 0) {
+				if (data[cstr_length(data) - 1] == '\n') {
+					data[cstr_length(data) - 1] = '\0';
 				}
 			}
 
-			if (ez_strlen(data) > 0) {
+			if (cstr_length(data) > 0) {
 				break;
 			} else {
 				printf("\nplease specify a value, or press CTRL + C to cancel: ");
 			}
 		}
 
-		target->key = ez_strdup(data);
+		target->key = cstr_dupe(data);
 		target->value_type = JSON_TYPE_OBJECT;
 		target->string_value = NULL;
 		target->values_count = 0;
@@ -583,10 +584,10 @@ init(void)
 		parse_user_options(target);
 
 		if (targets->values == NULL) {
-			targets->values = (JsonValue **)ez_alloc(sizeof(JsonValue *));
+			targets->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
 			targets->values_count = 1;
 		} else {
-			targets->values = (JsonValue **)ez_realloc(targets->values, sizeof(JsonValue *) * (targets->values_count + 1));
+			targets->values = (JsonValue **)c_realloc(targets->values, sizeof(JsonValue *) * (targets->values_count + 1));
 			targets->values_count++;
 		}
 
@@ -597,7 +598,7 @@ init(void)
 		fflush(stdin);
 	}
 
-	String json = ezjson_compile(root);
+	String json = cjson_generate(root);
 
 	FILE *file;
 
@@ -605,8 +606,8 @@ init(void)
 	fprintf(file, json);
 	fclose(file);
 
-	ez_free(json);
-	ezjson_free(root);
+	c_free(json);
+	cjson_free(root);
 
 	printf("\nsuccessfully genereated build file\n");
 
@@ -622,17 +623,17 @@ int main(int argc, char *argv[])
 		for (i = 1; i < argc; i++) {
 			char *arg = argv[i];
 
-			if (ez_strcmp(arg, "-v") || ez_strcmp(arg, "--version")) {
+			if (cstr_compare(arg, "-v") || cstr_compare(arg, "--version")) {
 				printf("easymake v%.1f - copyright (c) 2020 - 2021 EasySoft\n", VERSION);
 				return 0;
-			} else if (ez_strcmp(arg, "-h") || ez_strcmp(arg, "--help")) {
+			} else if (cstr_compare(arg, "-h") || cstr_compare(arg, "--help")) {
 				printf("easymake: usage: $ easymake [options] <target>\n");
 				return 0;
-			} else if (ez_strcmp(arg, "-f") || ez_strcmp(arg, "--file")) {
+			} else if (cstr_compare(arg, "-f") || cstr_compare(arg, "--file")) {
 				if (i + 1 < argc) {
 					file = argv[i + 1];
 				}
-			} else if (ez_strcmp(arg, "init")) {
+			} else if (cstr_compare(arg, "init")) {
 				return init();
 			} else {
 				target = argv[i];

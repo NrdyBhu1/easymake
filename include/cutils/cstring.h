@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2020 EasySoft
+ * Copyright (c) 2020 Cleanware
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  * and associated documentation files (the "Software"), to deal in the Software without
@@ -19,29 +19,22 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef EASYJSON_H
-#define EASYJSON_H
+#ifndef CSTRING_H
+#define CSTRING_H
 
 /* Types */
-enum {
-	JSON_TYPE_NOVALUE,
-	JSON_TYPE_STRING,
-	JSON_TYPE_OBJECT,
-	JSON_TYPE_ARRAY
-};
-
-struct json_value {
-	char *key;
-	int value_type;
-	char *string_value;
-	int values_count;
-	struct json_value **values;
-};
-typedef struct json_value JsonValue;
+typedef char * String;
 
 /* Function Declarations */
-JsonValue *ezjson_decompile(char *json);
-char *ezjson_compile(JsonValue *value);
-void ezjson_free(JsonValue *value);
+int cstr_length(String);
+int cstr_compare(String, String);
+void cstr_copy(String, String);
+String cstr_dupe(String);
+String cstr_concat(String, String);
+String cstr_fconcat(String, String);
+String cstr_cut(String, int);
+String cstr_fcut(String, int);
+String cstr_trim(String, String);
+String cstr_ftrim(String, String);
 
 #endif
