@@ -1,0 +1,21 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: gcc src/*.c -Iinclude -s -Og -ggdb -o easymake-gdb-x86_64
+    - uses: actions/upload-artifact@v2
+      with:
+        name: easymake-gdb-x86_64
+        path: easymake-gdb-x86_64

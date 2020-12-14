@@ -1,3 +1,5 @@
+![C/C++ CI](https://github.com/Cleanware/easymake/workflows/C/C++%20CI/badge.svg?branch=main)
+
 # easymake
 
 Simple, lightweight, FOSS alternative to GNU Make or CMake
