@@ -28,7 +28,7 @@
 		},
         "actions-test": {
             "compiler": "echo",
-            "sources":["Hello from Easymake!"],
+            "sources":["Hello world! from Easymake!"],
             "includes": []
         }
 	}
