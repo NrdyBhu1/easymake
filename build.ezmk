@@ -22,7 +22,8 @@
 			"compiler": "gcc",
 			"compiler_options": [
 				"-s",
-				"-O3"
+				"-O3",
+				"-Os"
 			]
 		}
 	}
