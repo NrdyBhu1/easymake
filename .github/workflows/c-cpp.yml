@@ -14,7 +14,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: make
-      run: gcc src/*.c -Iinclude -s -Og -ggdb -o easymake-gdb-x86_64
+      run: gcc src/*.c src/cutils/*.c -Iinclude -Iinclude/cutils -s -Og -ggdb -o easymake-gdb-x86_64
+    - name: make check
+      run: ./easymake-gdb-x86_64 actions-test
     - uses: actions/upload-artifact@v2
       with:
         name: easymake-gdb-x86_64

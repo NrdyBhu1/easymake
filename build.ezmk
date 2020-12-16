@@ -25,6 +25,11 @@
 				"-O3",
 				"-Os"
 			]
-		}
+		},
+        "actions-test": {
+            "compiler": "echo",
+            "sources":["Hello world! from Easymake!"],
+            "includes": []
+        }
 	}
 }
