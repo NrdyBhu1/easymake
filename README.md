@@ -4,6 +4,8 @@
 
 Simple, lightweight, FOSS alternative to GNU Make or CMake
 
+https://cleanware.github.io/wiki/easymake.html
+
 ## Installation
 
 Download the latest version from the releases tab, or build from source (check COMPILING_EASYMAKE file).
