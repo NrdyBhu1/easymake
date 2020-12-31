@@ -19,14 +19,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* Includes */
 #include "cjson.h"
-#include "cmemory.h"
-#include "cstring.h"
+#include <stdlib.h>
+#include <string.h>
 
-/* Function Definitions */
 JsonValue *
-cjson_parse(char *json)
+json_parse(char *json)
 {
 	String buffer = cstr_ftrim(json, " \n");
 	int length = cstr_length(buffer);

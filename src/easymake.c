@@ -1,44 +1,63 @@
-#include "easymake.h"
-#include "cmemory.h"
-#include "cstring.h"
-#include "cjson.h"
+/* EasyMake - a simple, lightweight, easy to use alternative to GNU Make or CMake
+ *
+ * Copyright (C) 2020 Cleanware
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
 
-#include <stdlib.h>
+#include "json.h"
 #include <stdio.h>
+#include <stdlib.h>
 
-float VERSION = 0.2;
+struct build_options
+{
+	char *project, *compiler, *output, *default_target;
+	char **sources, **includes, **libraries, **library_dirs, **compiler_options;
+	int sources_count, includes_count, libraries_count, library_dirs_count, compiler_options_count;
+};
+
+char *easymake_read_file(char *file_path);
+BuildOptions easymake_build_options(char *, char *);
+void easymake_build_project(BuildOptions *);
+
 int EXIT_CODE = 0, SKIP_NEXT_STEP = 0;
 
 char *
 easymake_read_file(char *file_path)
 {
-	FILE *file;
-	file = fopen(file_path, "r");
+    FILE *file = fopen(file_path, "r");
 
-	if (!file) {
-		printf("easymake: error: build file not found\n");
-		return NULL;
-	}
+    if(file == NULL) return NULL;
 
-	fseek(file, 0, SEEK_END);
+    int count = 1;
+    char *contents = (char *)malloc(sizeof(char));
 
-	long length = ftell(file);
-	rewind(file);
+    char c = fgetc(file);
+    while(c != EOF)
+    {
+        contents = (char *)realloc(contents, sizeof(char) * (count + 1));
 
-	char *text = (char *)c_alloc(length + 1);
+        contents[count - 1] = c;
+        contents[count] = '\0';
 
-	size_t read_count = fread(text, 1, length, file);
-	text[read_count] = '\0';
+        count++;
 
-	fclose(file);
+        c = fgetc(file);
+    }
 
-	/* Build file has to be atleast `{}\0` */
-	if(length >= 3) {
-		return text;
-	} else {
-		SKIP_NEXT_STEP = 1;
-		return NULL;
-	}
+    fclose(file);
+
+    return contents;
 }
 
 void
@@ -624,7 +643,7 @@ int main(int argc, char *argv[])
 			char *arg = argv[i];
 
 			if (cstr_compare(arg, "-v") || cstr_compare(arg, "--version")) {
-				printf("easymake v%.1f - copyright (c) 2020 - 2021 EasySoft\n", VERSION);
+				printf("easymake v1.0.0 - copyright (c) 2020 - 2021 EasySoft\n");
 				return 0;
 			} else if (cstr_compare(arg, "-h") || cstr_compare(arg, "--help")) {
 				printf("easymake: usage: $ easymake [options] <target>\n");
@@ -632,6 +651,7 @@ int main(int argc, char *argv[])
 			} else if (cstr_compare(arg, "-f") || cstr_compare(arg, "--file")) {
 				if (i + 1 < argc) {
 					file = argv[i + 1];
+					i++;
 				}
 			} else if (cstr_compare(arg, "init")) {
 				return init();
