@@ -1,0 +1,15 @@
+{
+	"cc": "gcc",
+	"out": "easymake",
+	"src": "src/easymake.c",
+	
+	"#default": "debug",
+	
+	"debug": {
+		"debug": "#(cc) -o #(out) #(src) -g -Og"
+	},
+	
+	"release": {
+		"release": "#(cc) -o #(out) #(src) -s -Os"
+	}
+}

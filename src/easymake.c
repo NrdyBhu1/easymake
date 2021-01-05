@@ -1,6 +1,6 @@
-/* EasyMake - a simple, lightweight, easy to use alternative to GNU Make or CMake
+/* easymake - a simple, lightweight, easy to use build system
  *
- * Copyright (C) 2020 Cleanware
+ * Copyright (C) 2021 Cleanware
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -19,30 +19,42 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct build_options
-{
-	char *project, *compiler, *output, *default_target;
-	char **sources, **includes, **libraries, **library_dirs, **compiler_options;
-	int sources_count, includes_count, libraries_count, library_dirs_count, compiler_options_count;
-};
+#if defined(_WIN64)
+    #define PLATFORM "win64"
+#elif defined(_WIN32)
+    #define PLATFORM "win32"
+#elif defined(__MACH__)
+    #define PLATFORM "macos"
+#elif defined(__APPLE__)
+    #define PLATFORM "apple"
+#elif defined(__ANDROID__)
+    #define PLATFORM "android"
+#elif defined(__linux__)
+    #define PLATFORM "linux"
+#elif defined(BSD)
+    #define PLATFORM "bsd"
+#elif defined(unix) || defined(__unix__) || defined(__unix)
+    #define PLATFORM "unix"
+#elif
+    #define PLATFORM "unknown"
+#endif
 
 char *easymake_read_file(char *file_path);
-BuildOptions easymake_build_options(char *, char *);
-void easymake_build_project(BuildOptions *);
+void easymake_parse_json(int *variable_count, struct json_value **variables, struct json_value *value);
+int easymake_build(char *file, char *target);
 
-int EXIT_CODE = 0, SKIP_NEXT_STEP = 0;
-
-char *
-easymake_read_file(char *file_path)
+char *easymake_read_file(char *file_path)
 {
     FILE *file = fopen(file_path, "r");
 
-    if(file == NULL) return NULL;
+    if(file == NULL)
+        return NULL;
 
     int count = 1;
     char *contents = (char *)malloc(sizeof(char));
 
     char c = fgetc(file);
+
     while(c != EOF)
     {
         contents = (char *)realloc(contents, sizeof(char) * (count + 1));
@@ -60,617 +72,445 @@ easymake_read_file(char *file_path)
     return contents;
 }
 
-void
-apply_build_options(BuildOptions *boptions, JsonValue *object)
+char *easymake_format_string(char *str, int variable_count, struct json_value **variables)
 {
-	if(SKIP_NEXT_STEP) return;
+    int formatted_count = 1;
+    char *formatted = (char *)malloc(sizeof(char));
 
-	int i;
-	for (i = 0; i < object->values_count; i++) {
-		JsonValue *val = object->values[i];
+    formatted[0] = '\0';
 
-		if (cstr_compare(val->key, "project")) {
-			if (val->value_type == JSON_TYPE_STRING) {
-				boptions->project = cstr_dupe(val->string_value);
-			}
-		} else if (cstr_compare(val->key, "compiler")) {
-			if (val->value_type == JSON_TYPE_STRING) {
-				boptions->compiler = cstr_dupe(val->string_value);
-			}
-		} else if (cstr_compare(val->key, "output")) {
-			if (val->value_type == JSON_TYPE_STRING) {
-				boptions->output = cstr_dupe(val->string_value);
-			}
-		} else if (cstr_compare(val->key, "default_target")) {
-			if(val->value_type == JSON_TYPE_STRING) {
-				boptions->default_target = cstr_dupe(val->string_value);
-			}
-		} else if (cstr_compare(val->key, "sources")) {
-			if (val->value_type == JSON_TYPE_ARRAY) {
-				boptions->sources = (char **)c_alloc(sizeof(char *) * val->values_count);
+    int storage_count = 1;
+    char *storage = (char *)malloc(sizeof(char));
 
-				int i;
-				for (i = 0; i < val->values_count; i++) {
-					boptions->sources[i] = cstr_dupe(val->values[i]->key);
-				}
+    storage[0] = '\0';
 
-				boptions->sources_count = val->values_count;
-			}
-		} else if (cstr_compare(val->key, "includes")) {
-			if (val->value_type == JSON_TYPE_ARRAY) {
-				boptions->includes = (char **)c_alloc(sizeof(char *) * val->values_count);
+    int j, k = 0, l;
+    for(j = 0; str[j] != '\0'; j++)
+    {
+        char c = str[j];
 
-				int i;
-				for (i = 0; i < val->values_count; i++) {
-					boptions->includes[i] = cstr_dupe(val->values[i]->key);
-				}
+        if(k == 0)
+        {
+            if(c == '#')
+            {
+                char c2 = str[j + 1];
+                if(c2 != '\0')
+                {
+                    if(c2 == '(')
+                        k = 1;
+                }
+                continue;
+            }
 
-				boptions->includes_count = val->values_count;
-			}
-		} else if (cstr_compare(val->key, "libraries")) {
-			if (val->value_type == JSON_TYPE_ARRAY) {
-				boptions->libraries = (char **)c_alloc(sizeof(char *) * val->values_count);
+            formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
 
-				int i;
-				for (i = 0; i < val->values_count; i++) {
-					boptions->libraries[i] = cstr_dupe(val->values[i]->key);
-				}
+            formatted[formatted_count - 1] = c;
+            formatted[formatted_count] = '\0';
 
-				boptions->libraries_count = val->values_count;
-			}
-		} else if (cstr_compare(val->key, "library_dirs")) {
-			if (val->value_type == JSON_TYPE_ARRAY) {
-				boptions->library_dirs = (char **)c_alloc(sizeof(char *) * val->values_count);
+            formatted_count++;
+        }
+        else if(k == 1)
+        {
+            if(c != ')')
+            {
+                storage = (char *)realloc(storage, sizeof(char) * (storage_count + 1));
 
-				int i;
-				for (i = 0; i < val->values_count; i++) {
-					boptions->library_dirs[i] = cstr_dupe(val->values[i]->key);
-				}
+                storage[storage_count - 1] = c;
+                storage[storage_count] = '\0';
 
-				boptions->library_dirs_count = val->values_count;
-			}
-		} else if (cstr_compare(val->key, "compiler_options")) {
-			if (val->value_type == JSON_TYPE_ARRAY) {
-				boptions->compiler_options = (char **)c_alloc(sizeof(char *) * val->values_count);
+                storage_count++;
+            }
+            else
+            {
+                for(l = 0; storage[l] != '\0'; l++)
+                {
+                    if(storage[l] == '#')
+                        storage = easymake_format_string(storage, variable_count, variables);
+                }
 
-				int i;
-				for (i = 0; i < val->values_count; i++) {
-					boptions->compiler_options[i] = cstr_dupe(val->values[i]->key);
-				}
+                for(l = 0; l < variable_count; l++)
+                {
+                    struct json_value *variable = variables[l];
 
-				boptions->compiler_options_count = val->values_count;
-			}
-		}
-	}
+                    if(strcmp(variable->key, storage) == 0)
+                    {
+                        int var_length = strlen(variable->string_value);
+
+                        formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + var_length + 1));
+
+                        memcpy(formatted + formatted_count - 1, variable->string_value, var_length);
+                        formatted_count += var_length + 1;
+
+                        formatted[formatted_count - 1] = '\0';
+                    }
+                }
+
+                storage = (char *)realloc(storage, sizeof(char));
+                storage_count = 1;
+
+                storage[storage_count - 1] = '\0';
+
+                k = 0;
+            }
+        }
+    }
+
+    return formatted;
 }
 
-BuildOptions
-easymake_build_options(char *buf, char *target)
+char **easymake_parse_commands(struct json_value *value, char *target)
 {
-	BuildOptions boptions;
+    int command_count = 0;
+    char **commands = NULL;
 
-	if(SKIP_NEXT_STEP) return boptions;
+    int target_count = 1;
+    char **targets = (char **)malloc(sizeof(char *) * 2);
 
-	boptions.project = NULL;
-	boptions.compiler = NULL;
-	boptions.output = NULL;
-	boptions.sources = NULL;
-	boptions.default_target = NULL;
-	boptions.includes = NULL;
-	boptions.libraries = NULL;
-	boptions.library_dirs = NULL;
-	boptions.compiler_options = NULL;
-	boptions.sources_count = 0;
-	boptions.includes_count = 0;
-	boptions.libraries_count = 0;
-	boptions.library_dirs_count = 0;
-	boptions.compiler_options_count = 0;
+    targets[0] = strdup(PLATFORM);
+    targets[1] = strdup(target);
 
-	JsonValue *json = cjson_parse(buf);
+    int variable_count = 1;
+    struct json_value **variables = (struct json_value **)malloc(sizeof(struct json_value *));
 
-	if (json->values[0]->values_count < 1) {
-		printf("easymake: error: invalid build file\n");
+    variables[0] = (struct json_value *)malloc(sizeof(struct json_value));
+    variables[0]->key = strdup("os");
+    variables[0]->string_value = strdup(PLATFORM);
 
-		EXIT_CODE = 6;
-		SKIP_NEXT_STEP = 1;
+    int value_count = 1;
+    struct json_value **values = (struct json_value **)malloc(sizeof(struct json_value *));
 
-		return boptions;
-	}
+    values[0] = value;
 
-	JsonValue *object = json->values[0];
+    int index_count = 1;
+    int *index = (int *)malloc(sizeof(int));
 
-	apply_build_options(&boptions, object);
+    for(index[index_count - 1] = 0; index[index_count - 1] < values[value_count - 1]->value_count; index[index_count - 1]++)
+    {
+        struct json_value *sub_value = values[value_count - 1]->values[index[index_count - 1]];
 
-	if (target == NULL) {
-		target = boptions.default_target;
-	}
+        switch(sub_value->type)
+        {
+            case JSON_TYPE_STRING:
+            {
+                if(strcmp(sub_value->key, "#build") == 0)
+                {
+                    targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
+                    target_count++;
 
-	if (target == NULL) {
-		printf("easymake: error: no target specified\n");
-		cjson_free(json);
+                    targets[target_count - 1] = sub_value->string_value;
 
-		return boptions;
-	}
+                    break;
+                }
 
-	printf("easymake: building project \'%s\' with target \'%s\'\n", boptions.project, target);
+                if(variable_count == 0)
+                {
+                    variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
+                    variable_count++;
 
-	int i;
-	for (i = 0; i < object->values_count; i++) {
-		JsonValue *val = object->values[i];
+                    variables[variable_count - 1] = sub_value;
+                }
+                else
+                {
+                    int j;
+                    for(j = 0; j < variable_count; j++)
+                    {
+                        if(strcmp(sub_value->key, variables[j]->key))
+                        {
+                            variables[j] = sub_value;
+                            j = -1;
 
-		if (cstr_compare(val->key, "targets")) {
-			if (val->value_type == JSON_TYPE_ARRAY || val->value_type == JSON_TYPE_OBJECT) {
-				int j;
-				for (j = 0; j < val->values_count; j++) {
-					JsonValue *arrval = val->values[j];
+                            break;
+                        }
+                    }
 
-					if (cstr_compare(arrval->key, target)) {
-						if (arrval->value_type == JSON_TYPE_OBJECT) {
-							apply_build_options(&boptions, val->values[j]);
-						}
-					}
-				}
-			}
-		}
-	}
+                    if(j != -1)
+                    {
+                        variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
+                        variable_count++;
 
-	cjson_free(json);
+                        variables[variable_count - 1] = sub_value;
+                    }
+                }
 
-	return boptions;
+                char *formatted = easymake_format_string(sub_value->string_value, variable_count, variables);
+
+                free(sub_value->string_value);
+
+                sub_value->string_value = formatted;
+
+                break;
+            }
+            case JSON_TYPE_OBJECT:
+            {
+                int j;
+                for(j = 0; j < target_count; j++)
+                {
+                    if(strcmp(sub_value->key, targets[j]) == 0)
+                    {
+                        printf("found target: %s\n", sub_value->key);
+                        values = (struct json_value **)realloc(values, sizeof(struct json_value *) * (value_count + 1));
+                        value_count++;
+
+                        values[value_count - 1] = sub_value;
+
+                        index = (int *)realloc(index, sizeof(int) * (index_count + 1));
+                        index_count++;
+
+                        index[index_count - 1] = 0;
+                    }
+                }
+
+                break;
+            }
+            case JSON_TYPE_ARRAY:
+            {
+                int j;
+                for(j = 0; j < sub_value->value_count; j++)
+                {
+                    struct json_value *arr_value = sub_value->values[j];
+
+                    if(arr_value->type == JSON_TYPE_NOVALUE)
+                    {
+                        char *formatted = easymake_format_string(arr_value->key, variable_count, variables);
+
+                        free(arr_value->key);
+
+                        arr_value->key = formatted;
+                    }
+                }
+
+                if(strcmp(sub_value->key, "#build") == 0)
+                {
+                    for(j = 0; j < sub_value->value_count; j++)
+                    {
+                        struct json_value *arr_value = sub_value->values[j];
+
+                        if(arr_value->type == JSON_TYPE_NOVALUE)
+                        {
+                            targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
+                            target_count++;
+
+                            targets[target_count - 1] = arr_value->key;
+                        }
+                    }
+
+                    break;
+                }
+
+                if(variable_count == 0)
+                {
+                    variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
+                    variable_count++;
+
+                    variables[variable_count - 1] = sub_value;
+                }
+                else
+                {
+                    int j;
+                    for(j = 0; j < variable_count; j++)
+                    {
+                        if(strcmp(sub_value->key, variables[j]->key) == 0)
+                        {
+                            variables[j] = sub_value;
+                            j = -1;
+
+                            break;
+                        }
+                    }
+
+                    if(j != -1)
+                    {
+                        variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
+                        variable_count++;
+
+                        variables[variable_count - 1] = sub_value;
+                    }
+                }
+
+                break;
+            }
+        }
+
+        int a = index[index_count - 1] + 1;
+        int b = values[value_count - 1]->value_count;
+
+        printf("%d, %d\n", a, b);
+
+        if(a == b)
+        {
+            values = (struct json_value **)realloc(values, sizeof(struct json_value **) * (value_count - 1));
+            value_count--;
+
+            index = (int *)realloc(index, sizeof(int) * (index_count - 1));
+            index_count--;
+        }
+    }
+
+    int i;
+    for(i = 0; i < variable_count; i++)
+    {
+        int j;
+        for(j = 0; j < target_count; j++)
+        {
+            if(strcmp(variables[i]->key, targets[j]) == 0)
+            {
+                if(variables[i]->type == JSON_TYPE_STRING)
+                {
+                    if(command_count == 0)
+                    {
+                        commands = (char **)malloc(sizeof(char *));
+                        command_count++;
+
+                        commands[command_count - 1] = strdup(variables[i]->string_value);
+                    }
+                    else
+                    {
+                        commands = (char **)realloc(commands, sizeof(char *) * (command_count + 1));
+                        command_count++;
+
+                        commands[command_count - 1] = strdup(variables[i]->string_value);
+                    }
+                }
+                else if(variables[i]->type == JSON_TYPE_ARRAY)
+                {
+                    int k;
+                    for(k = 0; k < variables[i]->value_count; k++)
+                    {
+                        if(command_count == 0)
+                        {
+                            commands = (char **)malloc(sizeof(char *));
+                            command_count++;
+
+                            commands[command_count - 1] = strdup(variables[i]->values[k]->key);
+                        }
+                        else
+                        {
+                            commands = (char **)realloc(commands, sizeof(char *) * (command_count + 1));
+                            command_count++;
+
+                            commands[command_count - 1] = strdup(variables[i]->values[k]->key);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    if(command_count == 0)
+    {
+        commands = (char **)malloc(sizeof(char *));
+        command_count++;
+
+        commands[command_count - 1] = NULL;
+    }
+    else
+    {
+        commands = (char **)realloc(commands, sizeof(char *) * (command_count + 1));
+        command_count++;
+
+        commands[command_count - 1] = NULL;
+    }
+
+    return commands;
 }
 
-void
-easymake_build_project(BuildOptions *boptions)
+int easymake_build(char *file, char *target)
 {
-	if (SKIP_NEXT_STEP) return;
+    char *contents = easymake_read_file(file);
 
-	char *command = "";
+    if(contents == NULL)
+    {
+        printf("easymake: error: file \'%s\' not found\n", file);
+        return -1;
+    }
 
-	if (!boptions->compiler) {
-		printf("easymake: error: no compiler specified\n");
+    struct json_value *value = json_parse(contents);
 
-		EXIT_CODE = 2;
-		return;
-	}
+    free(contents);
 
-	command = cstr_fconcat(command, boptions->compiler);
+    if(value->type != JSON_TYPE_OBJECT || value->value_count == 0)
+    {
+        json_delete(value);
 
-	if (boptions->output) {
-		command = cstr_fconcat(command, " -o ");
-		command = cstr_fconcat(command, boptions->output);
-	}
+        printf("easymake: error: invalid buildfile\n");
+        return -2;
+    }
 
-	int i;
+    char **commands = easymake_parse_commands(value->values[0], target);
 
-	if (boptions->sources_count > 0) {
-		for (i = 0; i < boptions->sources_count; i++) {
-			command = cstr_fconcat(command, " ");
-			command = cstr_fconcat(command, boptions->sources[i]);
-		}
-	} else {
-		printf("easymake: error: no source file(s) specified\n");
+    json_delete(value);
 
-		EXIT_CODE = 1;
-		return;
-	}
+    if(commands[0] == NULL)
+    {
+        free(commands[0]);
+        free(commands);
 
-	if (boptions->includes_count > 0) {
-		for (i = 0; i < boptions->includes_count; i++) {
-			command = cstr_fconcat(command, " -I");
-			command = cstr_fconcat(command, boptions->includes[i]);
-		}
-	}
+        printf("easymake: error: no target specified\n");
 
-	if (boptions->library_dirs_count > 0) {
-		for (i = 0; i < boptions->library_dirs_count; i++) {
-			command = cstr_fconcat(command, " -L");
-			command = cstr_fconcat(command, boptions->library_dirs[i]);
-		}
-	}
+        return -3;
+    }
 
-	if (boptions->libraries_count > 0) {
-		for (i = 0; i < boptions->libraries_count; i++) {
-			command = cstr_fconcat(command, " -l");
-			command = cstr_fconcat(command, boptions->libraries[i]);
-		}
-	}
+    int i;
+    for(i = 0; commands[i] != NULL; i++)
+    {
+        if(system(commands[i]) == 0)
+            printf("%s\n", commands[i]);
+        else
+            printf("easymake: error: failed to execute \'%s\'\n", commands[i]);
+    }
 
-	if (boptions->compiler_options_count > 0) {
-		for (i = 0; i < boptions->compiler_options_count; i++) {
-			command = cstr_fconcat(command, " ");
-			command = cstr_fconcat(command, boptions->compiler_options[i]);
-		}
-	}
+    for(; i >= 0; i--)
+        free(commands[i]);
 
-	printf("easymake: executing: \'%s\'\n\n", command);
+    free(commands);
 
-	system(command);
-	c_free(command);
-
-	if (boptions->project != NULL) c_free(boptions->project);
-	if (boptions->compiler != NULL) c_free(boptions->compiler);
-	if (boptions->output != NULL) c_free(boptions->output);
-	if (boptions->default_target != NULL) c_free(boptions->default_target);
-
-	if (boptions->sources != NULL) {
-		int i;
-		for (i = 0; i < boptions->sources_count; i++) {
-			if (boptions->sources[i] != NULL) {
-				c_free(boptions->sources[i]);
-			}
-		}
-
-		c_free(boptions->sources);
-	}
-
-	if (boptions->includes != NULL) {
-		int i;
-		for (i = 0; i < boptions->includes_count; i++) {
-			if (boptions->includes[i] != NULL) {
-				c_free(boptions->includes[i]);
-			}
-		}
-
-		c_free(boptions->includes);
-	}
-
-	if (boptions->libraries != NULL) {
-		int i;
-		for (i = 0; i < boptions->libraries_count; i++) {
-			if (boptions->libraries[i] != NULL) {
-				c_free(boptions->libraries[i]);
-			}
-		}
-
-		c_free(boptions->libraries);
-	}
-
-	if (boptions->library_dirs != NULL) {
-		int i;
-		for (i = 0; i < boptions->library_dirs_count; i++) {
-			if (boptions->library_dirs[i] != NULL) {
-				c_free(boptions->library_dirs[i]);
-			}
-		}
-
-		c_free(boptions->library_dirs);
-	}
-
-	if (boptions->compiler_options != NULL) {
-		int i;
-		for (i = 0; i < boptions->compiler_options_count; i++) {
-			if (boptions->compiler_options[i] != NULL) {
-				c_free(boptions->compiler_options[i]);
-			}
-		}
-
-		c_free(boptions->compiler_options);
-	}
-
-	printf("\neasymake: build process complete. check above for compiler errors\n");
-}
-
-int
-parse_user_value(JsonValue *root, String key, int required)
-{
-	char data[128];
-	int awaiting_input = 1;
-
-	while (awaiting_input) {
-		if (!required) {
-			awaiting_input = 0;
-		}
-
-		fgets(data, 128, stdin);
-
-		if (cstr_length(data) > 0) {
-			if (data[cstr_length(data) - 1] == '\n') {
-				data[cstr_length(data) - 1] = '\0';
-			}
-		}
-
-		if (cstr_length(data) > 0) {
-			awaiting_input = 0;
-
-			JsonValue *value = (JsonValue *)c_alloc(sizeof(JsonValue));
-
-			value->key = cstr_dupe(key);
-			value->value_type = JSON_TYPE_STRING;
-			value->values_count = 0;
-			value->values = NULL;
-
-			if (root->values == NULL) {
-				root->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
-				root->values_count = 1;
-			} else {
-				root->values = (JsonValue **)c_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
-				root->values_count++;
-			}
-
-			int length = cstr_length(data) + 1;
-			value->string_value = (String)c_alloc(sizeof(char) * length);
-
-			cstr_copy(value->string_value, data);
-			value->string_value[length - 1] = '\0';
-
-			root->values[root->values_count - 1] = value;
-		} else {
-			if (required) {
-				printf("\nplease specify a value, or press CTRL + C to cancel: ");
-			} else {
-				return 0;
-			}
-		}
-	}
-
-	return 1;
-}
-
-int
-parse_user_values(JsonValue *root, String key)
-{
-	char data[128];
-	fgets(data, 128, stdin);
-
-	if (cstr_length(data) > 0) {
-		if (data[cstr_length(data) - 1] == '\n') {
-			data[cstr_length(data) - 1] = '\0';
-		}
-	}
-
-	if (cstr_length(data) > 0) {
-		JsonValue *value = (JsonValue *)c_alloc(sizeof(JsonValue));
-
-		value->key = cstr_dupe(key);
-		value->value_type = JSON_TYPE_ARRAY;
-		value->string_value = NULL;
-		value->values_count = 0;
-		value->values = NULL;
-
-		if (root->values == NULL) {
-			root->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
-			root->values_count = 1;
-		} else {
-			root->values = (JsonValue **)c_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
-			root->values_count++;
-		}
-
-		while (cstr_length(data) > 0) {
-			JsonValue *arrvalue = (JsonValue *)c_alloc(sizeof(JsonValue));
-
-			arrvalue->value_type = JSON_TYPE_NOVALUE;
-			arrvalue->string_value = NULL;
-			arrvalue->values_count = 0;
-			arrvalue->values = NULL;
-
-			if (value->values == NULL) {
-				value->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
-				value->values_count = 1;
-			} else {
-				value->values = (JsonValue **)c_realloc(value->values, sizeof(JsonValue *) * (value->values_count + 1));
-				value->values_count++;
-			}
-
-			int length = cstr_length(data) + 1;
-			arrvalue->key = (String)c_alloc(sizeof(char) * length);
-
-			cstr_copy(arrvalue->key, data);
-			arrvalue->key[length - 1] = '\0';
-
-			value->values[value->values_count - 1] = arrvalue;
-
-			fgets(data, 128, stdin);
-
-			if (cstr_length(data) > 0) {
-				if (data[cstr_length(data) - 1] == '\n') {
-					data[cstr_length(data) - 1] = '\0';
-				}
-			}
-		}
-
-		root->values[root->values_count - 1] = value;
-	} else {
-		return 0;
-	}
-
-	return 1;
-}
-
-void
-parse_user_options(JsonValue *root)
-{
-	int current_question = 1;
-
-	while (current_question > 0) {
-		switch (current_question) {
-			case 1: {
-				printf("question: compiler (none): ");
-				parse_user_value(root, "compiler", 0);
-				current_question++;
-
-				break;
-			}
-			case 2: {
-				printf("question: output (none): ");
-				parse_user_value(root, "output", 0);
-				current_question++;
-
-				break;
-			}
-			case 3: {
-				printf("question: sources (none):\n");
-				parse_user_values(root, "sources");
-				current_question++;
-
-				break;
-			}
-			case 4: {
-				printf("question: includes (none):\n");
-				parse_user_values(root, "includes");
-				current_question++;
-
-				break;
-			}
-			case 5: {
-				printf("question: libraries (none):\n");
-				parse_user_values(root, "libraries");
-				current_question++;
-
-				break;
-			}
-			case 6: {
-				printf("question: compiler options (none):\n");
-				parse_user_values(root, "compiler_options");
-				current_question = 0;
-
-				break;
-			}
-		}
-	}
-}
-
-int
-init(void)
-{
-	JsonValue *root = (JsonValue *)c_alloc(sizeof(JsonValue));
-
-	root->key = NULL;
-	root->value_type = JSON_TYPE_OBJECT;
-	root->string_value = NULL;
-	root->values_count = 0;
-	root->values = NULL;
-
-	printf("question: project name (*): ");
-	parse_user_value(root, "project", 1);
-
-	parse_user_options(root);
-
-	printf("question: create target? (y/n): ");
-	char result = fgetc(stdin);
-	fflush(stdin);
-
-	JsonValue *targets;
-
-	if (result == 'Y' || result == 'y') {
-		targets = (JsonValue *)c_alloc(sizeof(JsonValue));
-
-		targets->key = cstr_dupe("targets");
-		targets->value_type = JSON_TYPE_OBJECT;
-		targets->string_value = NULL;
-		targets->values_count = 0;
-		targets->values = NULL;
-
-		if (root->values == NULL) {
-			root->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
-			root->values_count = 1;
-		} else {
-			root->values = (JsonValue **)c_realloc(root->values, sizeof(JsonValue *) * (root->values_count + 1));
-			root->values_count++;
-		}
-
-		root->values[root->values_count - 1] = targets;
-	}
-
-	while (result == 'Y' || result == 'y') {
-		JsonValue *target = (JsonValue *)c_alloc(sizeof(JsonValue));
-
-		printf("question: target name (*): ");
-
-		char data[128];
-
-		while (1) {
-			fgets(data, 128, stdin);
-
-			if (cstr_length(data) > 0) {
-				if (data[cstr_length(data) - 1] == '\n') {
-					data[cstr_length(data) - 1] = '\0';
-				}
-			}
-
-			if (cstr_length(data) > 0) {
-				break;
-			} else {
-				printf("\nplease specify a value, or press CTRL + C to cancel: ");
-			}
-		}
-
-		target->key = cstr_dupe(data);
-		target->value_type = JSON_TYPE_OBJECT;
-		target->string_value = NULL;
-		target->values_count = 0;
-		target->values = NULL;
-
-		parse_user_options(target);
-
-		if (targets->values == NULL) {
-			targets->values = (JsonValue **)c_alloc(sizeof(JsonValue *));
-			targets->values_count = 1;
-		} else {
-			targets->values = (JsonValue **)c_realloc(targets->values, sizeof(JsonValue *) * (targets->values_count + 1));
-			targets->values_count++;
-		}
-
-		targets->values[targets->values_count - 1] = target;
-
-		printf("question: create target? (y/n): ");
-		result = fgetc(stdin);
-		fflush(stdin);
-	}
-
-	String json = cjson_generate(root);
-
-	FILE *file;
-
-	file = fopen("build.ezmk", "w+");
-	fprintf(file, json);
-	fclose(file);
-
-	c_free(json);
-	cjson_free(root);
-
-	printf("\nsuccessfully genereated build file\n");
-
-	return 0;
+    return 0;
 }
 
 int main(int argc, char *argv[])
 {
-	char *file = "build.ezmk", *target = NULL;
+    char *file = "Build", *target = NULL;
 
-	if (argc > 1) {
-		int i;
-		for (i = 1; i < argc; i++) {
-			char *arg = argv[i];
+    if(argc > 1)
+    {
+        int i;
+        for(i = 1; i < argc; i++)
+        {
+            char *arg = argv[i];
 
-			if (cstr_compare(arg, "-v") || cstr_compare(arg, "--version")) {
-				printf("easymake v1.0.0 - copyright (c) 2020 - 2021 EasySoft\n");
-				return 0;
-			} else if (cstr_compare(arg, "-h") || cstr_compare(arg, "--help")) {
-				printf("easymake: usage: $ easymake [options] <target>\n");
-				return 0;
-			} else if (cstr_compare(arg, "-f") || cstr_compare(arg, "--file")) {
-				if (i + 1 < argc) {
-					file = argv[i + 1];
-					i++;
-				}
-			} else if (cstr_compare(arg, "init")) {
-				return init();
-			} else {
-				target = argv[i];
-			}
-		}
-	}
+            if(strcmp(arg, "-v") == 0 || strcmp(arg, "--version") == 0)
+            {
+                printf("easymake 1.0.0\nCopyright (C) 2021 Cleanware\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
+                return 0;
+            }
+            else if(strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
+            {
+                printf("Usage: easymake [target] options...\nOptions:\n");
 
-	char *buf = easymake_read_file(file);
+                printf(" -v / --version      -     Display easymake version information.\n");
+                printf(" -h / --help         -     Display this help page.\n");
+                printf(" -f / --file         -     Specify build file.\n");
+                printf(" -d / --debug        -     Enable verbose output.\n");
 
-	if (buf) {
-		BuildOptions boptions = easymake_build_options(buf, target);
-		easymake_build_project(&boptions);
-	}
+                return 0;
+            }
+            else if(strcmp(arg, "-f") == 0 || strcmp(arg, "--file") == 0)
+            {
+                if(i + 1 < argc)
+                {
+                    file = argv[i + 1];
+                    i++;
+                }
+            }
+            else if(strcmp(arg, "-d") == 0 || strcmp(arg, "--debug") == 0)
+            {
 
-	if(EXIT_CODE != 0) {
-		printf("easymake: error: non-zero exit code (%d)\n", EXIT_CODE);
-	}
+            }
+            else
+                target = argv[i];
+        }
+    }
 
-	return EXIT_CODE;
+    return easymake_build(file, target);
 }
