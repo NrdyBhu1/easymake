@@ -40,8 +40,9 @@
 #endif
 
 char *easymake_read_file(char *file_path);
+char *easymake_format_string(char *str, int variable_count, struct json_value **variables);
 void easymake_parse_json(int *variable_count, struct json_value **variables, struct json_value *value);
-int easymake_build(char *file, char *target);
+int easymake_build(char *file, char *target, int verbose);
 
 char *easymake_read_file(char *file_path)
 {
@@ -137,15 +138,49 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
 
                     if(strcmp(variable->key, storage) == 0)
                     {
-                        int m;
-                        for(m = 0; variable->string_value[m] != '\0'; m++)
+                        if(variable->type == JSON_TYPE_STRING)
                         {
-                            formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
+                            int m;
+                            for(m = 0; variable->string_value[m] != '\0'; m++)
+                            {
+                                formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
 
-                            formatted[formatted_count - 1] = variable->string_value[m];
-                            formatted[formatted_count] = '\0';
+                                formatted[formatted_count - 1] = variable->string_value[m];
+                                formatted[formatted_count] = '\0';
 
-                            formatted_count++;
+                                formatted_count++;
+                            }
+                        }
+                        else if(variable->type == JSON_TYPE_ARRAY)
+                        {
+                            int m, n;
+                            for(m = 0; m < variable->value_count; m++)
+                            {
+                                struct json_value *arr_value = variable->values[m];
+
+                                if(arr_value->type == JSON_TYPE_NOVALUE)
+                                {
+                                    for(n = 0; arr_value->key[n] != '\0'; n++)
+                                    {
+                                        formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
+
+                                        formatted[formatted_count - 1] = arr_value->key[n];
+                                        formatted[formatted_count] = '\0';
+
+                                        formatted_count++;
+                                    }
+
+                                    if(m + 1 < variable->value_count)
+                                    {
+                                        formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
+
+                                        formatted[formatted_count - 1] = ' ';
+                                        formatted[formatted_count] = '\0';
+
+                                        formatted_count++;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -214,6 +249,19 @@ char **easymake_parse_commands(struct json_value *value, char *target)
                     break;
                 }
 
+                if(strcmp(sub_value->key, "#default") == 0)
+                {
+                    if(target_count <= 1)
+                    {
+                        targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
+                        target_count++;
+
+                        targets[target_count - 1] = sub_value->string_value;
+
+                        break;
+                    }
+                }
+
                 if(variable_count == 0)
                 {
                     variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
@@ -228,7 +276,6 @@ char **easymake_parse_commands(struct json_value *value, char *target)
                     {
                         if(strcmp(sub_value->key, variables[j]->key) == 0)
                         {
-                            printf("overriding \'%s\'\n", variables[j]->key);
                             variables[j] = sub_value;
                             j = -1;
 
@@ -238,7 +285,6 @@ char **easymake_parse_commands(struct json_value *value, char *target)
 
                     if(j != -1)
                     {
-                        printf("adding \'%s\'\n", sub_value->key);
                         variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
                         variable_count++;
 
@@ -247,8 +293,6 @@ char **easymake_parse_commands(struct json_value *value, char *target)
                 }
 
                 char *formatted = easymake_format_string(sub_value->string_value, variable_count, variables);
-
-                printf("FORMATTED: %s\n", formatted);
 
                 free(sub_value->string_value);
 
@@ -328,7 +372,6 @@ char **easymake_parse_commands(struct json_value *value, char *target)
                     {
                         if(strcmp(sub_value->key, variables[j]->key) == 0)
                         {
-                            printf("overriding \'%s\'\n", variables[j]->key);
                             variables[j] = sub_value;
                             j = -1;
 
@@ -338,7 +381,6 @@ char **easymake_parse_commands(struct json_value *value, char *target)
 
                     if(j != -1)
                     {
-                        printf("adding \'%s\'\n", sub_value->key);
                         variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
                         variable_count++;
 
@@ -350,7 +392,7 @@ char **easymake_parse_commands(struct json_value *value, char *target)
             }
         }
 
-        if(index_count > 0 && value_count > 0 && index[index_count - 1] + 1 == values[value_count - 1]->value_count)
+        if(value_count > 0 && index[index_count - 1] + 1 == values[value_count - 1]->value_count)
         {
             values = (struct json_value **)realloc(values, sizeof(struct json_value **) * (value_count - 1));
             value_count--;
@@ -358,6 +400,9 @@ char **easymake_parse_commands(struct json_value *value, char *target)
             index = (int *)realloc(index, sizeof(int) * (index_count - 1));
             index_count--;
         }
+
+        if(value_count == 0)
+            break;
     }
 
     int i;
@@ -410,7 +455,6 @@ char **easymake_parse_commands(struct json_value *value, char *target)
         }
     }
 
-
     if(command_count == 0)
     {
         commands = (char **)malloc(sizeof(char *));
@@ -429,7 +473,7 @@ char **easymake_parse_commands(struct json_value *value, char *target)
     return commands;
 }
 
-int easymake_build(char *file, char *target)
+int easymake_build(char *file, char *target, int verbose)
 {
     char *contents = easymake_read_file(file);
 
@@ -469,7 +513,10 @@ int easymake_build(char *file, char *target)
     for(i = 0; commands[i] != NULL; i++)
     {
         if(system(commands[i]) == 0)
-            printf("%s\n", commands[i]);
+        {
+            if(verbose)
+                printf("%s\n", commands[i]);
+        }
         else
             printf("easymake: error: failed to execute \'%s\'\n", commands[i]);
     }
@@ -485,6 +532,7 @@ int easymake_build(char *file, char *target)
 int main(int argc, char *argv[])
 {
     char *file = "Build", *target = NULL;
+    int verbose = 0;
 
     if(argc > 1)
     {
@@ -519,13 +567,12 @@ int main(int argc, char *argv[])
             }
             else if(strcmp(arg, "-d") == 0 || strcmp(arg, "--debug") == 0)
             {
-                printf("unsupported feature\n");
-                return 0;
+                verbose = 1;
             }
             else
                 target = argv[i];
         }
     }
 
-    return easymake_build(file, target);
+    return easymake_build(file, target, verbose);
 }
