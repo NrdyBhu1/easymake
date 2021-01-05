@@ -220,8 +220,11 @@ char **easymake_parse_commands(struct json_value *value, char *target)
     struct json_value **variables = (struct json_value **)malloc(sizeof(struct json_value *));
 
     variables[0] = (struct json_value *)malloc(sizeof(struct json_value));
+    variables[0]->type = JSON_TYPE_STRING;
+    variables[0]->value_count = 0;
     variables[0]->key = strdup("os");
     variables[0]->string_value = strdup(PLATFORM);
+    variables[0]->values = NULL;
 
     int value_count = 1;
     struct json_value **values = (struct json_value **)malloc(sizeof(struct json_value *));
