@@ -41,8 +41,8 @@
 
 char *easymake_read_file(char *file_path);
 char *easymake_format_string(char *str, int variable_count, struct json_value **variables);
-void easymake_parse_json(int *variable_count, struct json_value **variables, struct json_value *value);
-int easymake_build(char *file, char *target, int verbose);
+char **easymake_parse_commands(struct json_value *value, char **user_targets);
+int easymake_build(char *file, char **targets, int verbose);
 
 char *easymake_read_file(char *file_path)
 {
@@ -198,7 +198,7 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
     return formatted;
 }
 
-char **easymake_parse_commands(struct json_value *value, char *target)
+char **easymake_parse_commands(struct json_value *value, char **user_targets)
 {
     int command_count = 0;
     char **commands = NULL;
@@ -208,12 +208,16 @@ char **easymake_parse_commands(struct json_value *value, char *target)
 
     targets[0] = strdup(PLATFORM);
 
-    if(target != NULL)
+    if(user_targets[0] != NULL)
     {
-        targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
-        target_count++;
+        int i;
+        for(i = 0; user_targets[i] != NULL; i++)
+        {
+            targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
+            target_count++;
 
-        targets[target_count - 1] = target;
+            targets[target_count - 1] = user_targets[i];
+        }
     }
 
     int variable_count = 1;
@@ -476,7 +480,7 @@ char **easymake_parse_commands(struct json_value *value, char *target)
     return commands;
 }
 
-int easymake_build(char *file, char *target, int verbose)
+int easymake_build(char *file, char **targets, int verbose)
 {
     char *contents = easymake_read_file(file);
 
@@ -498,7 +502,7 @@ int easymake_build(char *file, char *target, int verbose)
         return -2;
     }
 
-    char **commands = easymake_parse_commands(value->values[0], target);
+    char **commands = easymake_parse_commands(value->values[0], targets);
 
     json_delete(value);
 
@@ -534,8 +538,8 @@ int easymake_build(char *file, char *target, int verbose)
 
 int main(int argc, char *argv[])
 {
-    char *file = "Build", *target = NULL;
-    int verbose = 0;
+    int target_count = 0, verbose = 0;
+    char *file = "Build", *targets[argc];
 
     if(argc > 1)
     {
@@ -551,7 +555,7 @@ int main(int argc, char *argv[])
             }
             else if(strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
             {
-                printf("Usage: easymake [target] options...\nOptions:\n");
+                printf("Usage: easymake [options] targets...\nOptions:\n");
 
                 printf(" -v / --version      -     Display easymake version information.\n");
                 printf(" -h / --help         -     Display this help page.\n");
@@ -573,9 +577,14 @@ int main(int argc, char *argv[])
                 verbose = 1;
             }
             else
-                target = argv[i];
+            {
+                targets[target_count] = argv[i];
+                target_count++;
+            }
         }
     }
 
-    return easymake_build(file, target, verbose);
+    targets[target_count] = NULL;
+
+    return easymake_build(file, targets, verbose);
 }
