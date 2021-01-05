@@ -2,13 +2,16 @@
 	"cc": "gcc",
 	"out": "easymake",
 	"src": "src/easymake.c",
-	
+
 	"#default": "debug",
-	
+
 	"debug": {
-		"debug": "#(cc) -o #(out) #(src) -g -Og"
+		"debug": [
+		    "#(cc) -o #(out) #(src) -g -Og",
+		    "echo finished building on platform #(os)"
+		]
 	},
-	
+
 	"release": {
 		"release": "#(cc) -o #(out) #(src) -s -Os"
 	}

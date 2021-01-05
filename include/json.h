@@ -51,16 +51,25 @@ static struct json_value *json_parse(char *json)
     int i, j = 0;
     for(i = 0; json[i] != '\0'; i++)
     {
-        int j, skip = 0;
-        for(j = 0; trim[j] != '\0'; j++)
+        if(json[i] == '\'' || json[i] == '\"')
         {
-            if(json[i] == '\'' || json[i] == '\"')
-                j = j == 0 ? 1 : 0;
+            if(j == 0)
+                j = 1;
+            else
+                j = 0;
+        }
 
-            if(j == 0 && json[i] == trim[j])
+        int skip = 0;
+        if(j == 0)
+        {
+            int k;
+            for(k = 0; trim[k] != '\0'; k++)
             {
-                skip = 1;
-                break;
+                if(json[i] == trim[k])
+                {
+                    skip = 1;
+                    break;
+                }
             }
         }
 
