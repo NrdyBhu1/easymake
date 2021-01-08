@@ -195,6 +195,8 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
         }
     }
 
+    free(storage);
+
     return formatted;
 }
 
@@ -476,6 +478,12 @@ char **easymake_parse_commands(struct json_value *value, char **user_targets)
 
         commands[command_count - 1] = NULL;
     }
+
+    free(targets[0]);
+    free(targets);
+
+    free(variables[0]);
+    free(variables);
 
     return commands;
 }

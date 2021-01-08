@@ -6,14 +6,6 @@
 
 	"#default": "debug",
 
-	"debug": {
-		"debug": [
-			"echo #(os)",
-			"#(cc) -o #(out) #(src) #(include_dirs) -g -Og"
-		]
-	},
-
-	"release": {
-		"release": "#(cc) -o #(out) #(src) #(include_dirs) -s -Os"
-	}
+	"debug": "#(cc) -o #(out) #(src) #(include_dirs) -g -Og",
+	"release": "#(cc) -o #(out) #(src) #(include_dirs) -s -Os"
 }
