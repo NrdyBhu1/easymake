@@ -482,10 +482,9 @@ char **easymake_parse_commands(struct json_value *value, char **user_targets)
     free(targets[0]);
     free(targets);
 
-    free(variables[0]);
-    free(variables[0]->key);
     free(variables[0]->string_value);
-    
+    free(variables[0]->key);
+    free(variables[0]);
     free(variables);
 
     return commands;
