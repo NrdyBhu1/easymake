@@ -1,18 +1,22 @@
 /* json.h - a simple, lightweight, easy to use json parser
  *
- * Copyright (C) 2021 Cleanware
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Copyright (c) 2021 Cleanware
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * This software is provided 'as-is', without any express or implied
+ * warranty. In no event will the authors be held liable for any damages
+ * arising from the use of this software.
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source distribution.
 */
 
 #ifndef JSON_H
@@ -21,14 +25,47 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum
+/**
+ * Json value types as enum.
+ */
+enum json_value_type
 {
-    JSON_TYPE_NOVALUE,
-    JSON_TYPE_STRING,
-    JSON_TYPE_OBJECT,
-    JSON_TYPE_ARRAY
+    JSON_TYPE_NOVALUE, /* 0 */
+    JSON_TYPE_STRING,  /* 1 */
+    JSON_TYPE_OBJECT,  /* 2 */
+    JSON_TYPE_ARRAY    /* 3 */
 };
 
+/**
+ * Represents a json value, which can be any
+ * json type and have any type of value(s).
+ *
+ * In JSON (for string):
+ *
+ * "some_json_key":"some_json_value"
+ *      ^^^              ^^^
+ *      key             value
+ *
+ * In JSON (for object/array):
+ *
+ * "some_json_key": {
+ *      ^^^
+ *      key
+ *
+ *   "some_json_key": "value",      <|\
+ *   "another_json_key: "value",    <| | Values
+ *   "some_other_json_key: "value"  <|/
+ * }
+ *
+ * type - holds the value type (from the enum above)
+ * value_count - if the value is of type object or array, this holds
+ *               the amount of child/subvalues the object or array has
+ * key - holds the string for the key of the json_value
+ * string_value - if the value of the json_value is a string, the string
+ *                value will be here
+ * values - the list of children/sub values the json value has if the
+ *          json value is a object or array
+ */
 struct json_value
 {
     int type, value_count;
@@ -36,55 +73,48 @@ struct json_value
     struct json_value **values;
 };
 
+/**
+ * Takes in a json string, and converts it into
+ * a json tree.
+ *
+ * json - raw json string
+ * returns - a struct json_value of type object
+ *           with 'values' containing all json
+ *           base objects
+ */
 static struct json_value *json_parse(char *json);
+
+/**
+ * A self-branching function to generate a json
+ * string from a json tree.
+ */
 static void json_generate(char **json, int index, struct json_value *value);
+
+/**
+ * A function that simplifies the use of json_generate.
+ */
 static char *json_build(struct json_value *value);
+
+/**
+ * A function to cleanup and free all memory used by
+ * a json tree.
+ */
 static void json_delete(struct json_value *value);
+
+/*----------------------------------------------------------------------------*/
+/*                          Function Implementations                          */
+/*----------------------------------------------------------------------------*/
+
+enum parser_state
+{
+    IDLE,            /* 0 */
+    PARSING_KEY,     /* 1 */
+    CHECKING_TYPE,   /* 2 */
+    PARSING_STRING,  /* 3 */
+};
 
 static struct json_value *json_parse(char *json)
 {
-    char *trim = " \n";
-
-    char *buffer = (char *)malloc(sizeof(char));
-    buffer[0] = '\0';
-
-    int i, j = 0;
-    for(i = 0; json[i] != '\0'; i++)
-    {
-        if(json[i] == '\'' || json[i] == '\"')
-        {
-            if(j == 0)
-                j = 1;
-            else
-                j = 0;
-        }
-
-        int skip = 0;
-        if(j == 0)
-        {
-            int k;
-            for(k = 0; trim[k] != '\0'; k++)
-            {
-                if(json[i] == trim[k])
-                {
-                    skip = 1;
-                    break;
-                }
-            }
-        }
-
-        if(!skip)
-        {
-            int length = strlen(buffer);
-            buffer = (char *)realloc(buffer, length + 2);
-
-            buffer[length] = json[i];
-            buffer[length + 1] = '\0';
-        }
-    }
-
-    int length = strlen(buffer);
-
     struct json_value *container = (struct json_value *)malloc(sizeof(struct json_value));
 
     container->type = JSON_TYPE_OBJECT;
@@ -93,195 +123,299 @@ static struct json_value *json_parse(char *json)
     container->string_value = NULL;
     container->values = NULL;
 
-    int count = 1;
+    int value_count = 1;
     struct json_value **values = (struct json_value **)malloc(sizeof(struct json_value *));
 
-    values[count - 1] = container;
+    values[value_count - 1] = container;
 
+    int storage_count = 1;
     char *storage = (char *)malloc(sizeof(char));
-    storage[0] = '\0';
 
-    j = 0;
-    for(i = 0; i < length; i++)
+    storage[0] = 0;
+
+    /* parser state */
+    int state = IDLE;
+
+    int i;
+    for(i = 0; json[i] != 0; i++)
     {
-        char c = buffer[i];
+        char c = json[i];
 
-        switch(c)
+        switch(state)
         {
-            case '{':
-            case '[':
+            case IDLE:
             {
-                struct json_value *value = (struct json_value *)malloc(sizeof(struct json_value));
-
-                if(c == '{')
-                    value->type = JSON_TYPE_OBJECT;
-                else if(c == '[')
-                    value->type = JSON_TYPE_ARRAY;
-
-                if(strlen(storage) > 0)
+                switch(c)
                 {
-                    value->key = strdup(storage);
-
-                    storage = (char *)realloc(storage, sizeof(char));
-                    storage[0] = '\0';
-                }
-                else
-                    value->key = NULL;
-
-                value->string_value = NULL;
-                value->value_count = 0;
-                value->values = NULL;
-
-                if(values[count - 1]->values == NULL)
-                    values[count - 1]->values = (struct json_value **)malloc(sizeof(struct json_value *));
-                else
-                    values[count - 1]->values = (struct json_value **)realloc(values[count - 1]->values, sizeof(struct json_value *) * (values[count - 1]->value_count + 1));
-
-                values[count - 1]->value_count++;
-                values[count - 1]->values[values[count - 1]->value_count - 1] = value;
-
-                values = (struct json_value **)realloc(values, sizeof(struct json_value *) * (count + 1));
-
-                count++;
-                values[count - 1] = value;
-
-                break;
-            }
-            case ']':
-            case '}':
-            {
-                values = (struct json_value **)realloc(values, sizeof(struct json_value *) * (count - 1));
-                count--;
-
-                break;
-            }
-            case '\"':
-            case '\'':
-            {
-                if(j == 0)
-                {
-                    j = 1;
-                }
-                else if(j == 1)
-                {
-                    if(i + 1 < length)
+                    case '\'':
+                    case '\"':
                     {
-                        if(buffer[i + 1] != ':')
+                        printf("Switching state to: PARSING_KEY\n");
+
+                        state = PARSING_KEY;
+                        break;
+                    }
+                    case '{':
+                    case '[':
+                    {
+                        printf("Switching state to: CHECKING_TYPE\n");
+
+                        i--;
+                        state = CHECKING_TYPE;
+
+                        break;
+                    }
+                    case '}':
+                    case ']':
+                    {
+                        printf("Stepping backwards...\n");
+
+                        if(value_count > 1)
                         {
-                            j = 0;
+                            values = (struct json_value **)realloc(values, sizeof(struct json_value *) * (value_count - 1));
+                            value_count--;
+                        }
 
-                            struct json_value *value = (struct json_value *)malloc(sizeof(struct json_value));
+                        break;
+                    }
+                }
 
-                            value->type = JSON_TYPE_NOVALUE;
+                break;
+            }
+            case PARSING_KEY:
+            {
+                switch(c)
+                {
+                    case '\'':
+                    case '\"':
+                    {
+                        state = CHECKING_TYPE;
+                        break;
+                    }
+                    default:
+                    {
+                        printf("KEY: %c\n", c);
 
-                            if(strlen(storage) > 0)
+                        if(c == '\\')
+                        {
+                            printf("Found escape code: %c\n", json[i + 1]);
+                            if(json[i + 1] == 'n')
                             {
-                                value->key = strdup(storage);
-
-                                storage = (char *)realloc(storage, sizeof(char));
-                                storage[0] = '\0';
+                                c = '\n';
+                                i++;
                             }
-                            else
-                                value->key = NULL;
+                            else if(json[i + 1] == '\'' || json[i + 1] == '\"')
+                            {
+                                c = json[i + 1];
+                                i++;
+                            }
+                        }
 
-                            value->string_value = NULL;
-                            value->value_count = 0;
-                            value->values = NULL;
+                        storage = (char *)realloc(storage, sizeof(char) * (storage_count + 1));
 
-                            if(values[count - 1]->values == NULL)
-                                values[count - 1]->values = (struct json_value **)malloc(sizeof(struct json_value *));
-                            else
-                                values[count - 1]->values = (struct json_value **)realloc(values[count - 1]->values, sizeof(struct json_value *) * (values[count - 1]->value_count + 1));
+                        storage[storage_count - 1] = c;
+                        storage[storage_count] = 0;
 
-                            values[count - 1]->value_count++;
-                            values[count - 1]->values[values[count - 1]->value_count - 1] = value;
+                        storage_count++;
+
+                        break;
+                    }
+                }
+
+                break;
+            }
+            case CHECKING_TYPE:
+            {
+                switch(c)
+                {
+                    case '\'':
+                    case '\"':
+                    {
+                        /* string value */
+
+                        struct json_value *value = (struct json_value *)malloc(sizeof(struct json_value));
+
+                        value->type = JSON_TYPE_STRING;
+
+                        if(storage_count > 1)
+                        {
+                            value->key = strdup(storage);
+
+                            storage = (char *)realloc(storage, sizeof(char));
+                            storage_count = 1;
+
+                            storage[0] = 0;
                         }
                         else
-                        {
-                            if(i + 2 < length)
-                            {
-                                if(buffer[i + 2] != '{' && buffer[i + 2] != '[')
-                                {
-                                    struct json_value *value = (struct json_value *)malloc(sizeof(struct json_value));
+                            value->key = NULL;
 
-                                    value->type = JSON_TYPE_STRING;
+                        printf("STRING: %s\n", value->key);
 
-                                    if(strlen(storage) > 0)
-                                    {
-                                        value->key = strdup(storage);
+                        value->string_value = NULL;
+                        value->value_count = 0;
+                        value->values = NULL;
 
-                                        storage = (char *)realloc(storage, sizeof(char));
-                                        storage[0] = '\0';
-                                    }
-                                    else
-                                        value->key = NULL;
+                        if(values[value_count - 1]->values == NULL)
+                            values[value_count - 1]->values = (struct json_value **)malloc(sizeof(struct json_value *));
+                        else
+                            values[value_count - 1]->values = (struct json_value **)realloc(values[value_count - 1]->values, sizeof(struct json_value *) * (values[value_count - 1]->value_count + 1));
 
-                                    value->string_value = NULL;
-                                    value->value_count = 0;
-                                    value->values = NULL;
+                        values[value_count - 1]->value_count++;
+                        values[value_count - 1]->values[values[value_count - 1]->value_count - 1] = value;
 
-                                    if(values[count - 1]->values == NULL)
-                                        values[count - 1]->values = (struct json_value **)malloc(sizeof(struct json_value *));
-                                    else
-                                        values[count - 1]->values = (struct json_value **)realloc(values[count - 1]->values, sizeof(struct json_value *) * (values[count - 1]->value_count + 1));
+                        state = PARSING_STRING;
 
-                                    values[count - 1]->value_count++;
-                                    values[count - 1]->values[values[count - 1]->value_count - 1] = value;
-
-                                    values = (struct json_value **)realloc(values, sizeof(struct json_value *) * (count + 1));
-
-                                    count++;
-                                    values[count - 1] = value;
-
-                                    j = 3;
-                                    i++;
-                                }
-                                else
-                                {
-                                    j = 0;
-                                    i++;
-                                }
-                            }
-                        }
+                        break;
                     }
-                }
-                else if(j == 3)
-                    j = 4;
-                else if(j == 4)
-                {
-                    if(strlen(storage) > 0)
+                    case '{':
+                    case '[':
                     {
-                        values[count - 1]->string_value = strdup(storage);
+                        /* object/array value */
 
-                        storage = (char *)realloc(storage, sizeof(char));
-                        storage[0] = '\0';
+                        struct json_value *value = (struct json_value *)malloc(sizeof(struct json_value));
+
+                        if(c == '{') value->type = JSON_TYPE_OBJECT;
+                        else if(c == '[') value->type = JSON_TYPE_ARRAY;
+
+                        if(storage_count > 1)
+                        {
+                            value->key = strdup(storage);
+
+                            storage = (char *)realloc(storage, sizeof(char));
+                            storage_count = 1;
+
+                            storage[0] = 0;
+                        }
+                        else
+                            value->key = NULL;
+
+                        printf("OBJECT/ARRAY (%d): %s\n", value->type, value->key);
+
+                        value->string_value = NULL;
+                        value->value_count = 0;
+                        value->values = NULL;
+
+                        if(values[value_count - 1]->values == NULL)
+                            values[value_count - 1]->values = (struct json_value **)malloc(sizeof(struct json_value *));
+                        else
+                            values[value_count - 1]->values = (struct json_value **)realloc(values[value_count - 1]->values, sizeof(struct json_value *) * (values[value_count - 1]->value_count + 1));
+
+                        values[value_count - 1]->value_count++;
+                        values[value_count - 1]->values[values[value_count - 1]->value_count - 1] = value;
+
+                        values = (struct json_value **)realloc(values, sizeof(struct json_value *) * (value_count + 1));
+                        value_count++;
+
+                        values[value_count - 1] = value;
+
+                        state = IDLE;
+
+                        break;
                     }
-                    else
-                        values[count - 1]->string_value = NULL;
+                    case ',':
+                    case '}':
+                    case ']':
+                    {
+                        /* no value */
 
-                    values = (struct json_value **)realloc(values, sizeof(struct json_value *) * (count - 1));
-                    count--;
+                        struct json_value *value = (struct json_value *)malloc(sizeof(struct json_value));
 
-                    j = 0;
+                        value->type = JSON_TYPE_NOVALUE;
+
+                        if(storage_count > 1)
+                        {
+                            value->key = strdup(storage);
+
+                            storage = (char *)realloc(storage, sizeof(char));
+                            storage_count = 1;
+
+                            storage[0] = 0;
+                        }
+                        else
+                            value->key = NULL;
+
+                        printf("NO_VALUE: %s\n", value->key);
+
+                        value->string_value = NULL;
+                        value->value_count = 0;
+                        value->values = NULL;
+
+                        if(values[value_count - 1]->values == NULL)
+                            values[value_count - 1]->values = (struct json_value **)malloc(sizeof(struct json_value *));
+                        else
+                            values[value_count - 1]->values = (struct json_value **)realloc(values[value_count - 1]->values, sizeof(struct json_value *) * (values[value_count - 1]->value_count + 1));
+
+                        values[value_count - 1]->value_count++;
+                        values[value_count - 1]->values[values[value_count - 1]->value_count - 1] = value;
+
+                        state = IDLE;
+                        i--;
+
+                        break;
+                    }
                 }
+
                 break;
             }
-            default:
+            case PARSING_STRING:
             {
-                if(j == 1 || j == 4)
+                switch(c)
                 {
-                    int storage_length = strlen(storage) + 1;
-                    storage = (char *)realloc(storage, sizeof(char) * (storage_length + 1));
+                    case '\'':
+                    case '\"':
+                    {
+                        if(storage_count > 1)
+                        {
+                            values[value_count - 1]->string_value = strdup(storage);
 
-                    storage[storage_length - 1] = c;
-                    storage[storage_length] = '\0';
+                            storage = (char *)realloc(storage, sizeof(char));
+                            storage_count = 1;
+
+                            storage[0] = 0;
+                        }
+
+                        printf("STRING_VALUE: %s\n", values[value_count-1]->string_value);
+
+                        state = IDLE;
+
+                        break;
+                    }
+                    default:
+                    {
+                        printf("STORING %c\n", c);
+
+                        if(c == '\\')
+                        {
+                            if(json[i + 1] == 'n')
+                            {
+                                c = '\n';
+                                i++;
+                            }
+                            else if(json[i + 1] == '\'' || json[i + 1] == '\"')
+                            {
+                                c = json[i + 1];
+                                i++;
+                            }
+                        }
+
+                        storage = (char *)realloc(storage, sizeof(char) * (storage_count + 1));
+
+                        storage[storage_count - 1] = c;
+                        storage[storage_count] = 0;
+
+                        storage_count++;
+
+                        break;
+                    }
                 }
+
                 break;
             }
         }
+
+        printf("STORAGE: %s\n  -  VALUE_COUNT: %d\n", storage, value_count);
     }
 
-    free(buffer);
     free(storage);
 
     values = realloc(values, 1);

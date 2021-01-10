@@ -500,25 +500,28 @@ int easymake_build(char *file, char **targets, int verbose)
         return -1;
     }
 
-    struct json_value *value = json_parse(contents);
+    struct json_value *tree = json_parse(contents);
 
     free(contents);
 
-    if(value->type != JSON_TYPE_OBJECT || value->value_count == 0)
+    printf("VALUES: %d\n", tree->value_count);
+    printf("%d\n", tree->values[0]->type);
+    printf("%d\n", tree->values[0]->value_count);
+
+    if(tree->type != JSON_TYPE_OBJECT || tree->value_count == 0)
     {
-        json_delete(value);
+        json_delete(tree);
 
         printf("easymake: error: invalid buildfile\n");
         return -2;
     }
 
-    char **commands = easymake_parse_commands(value->values[0], targets);
+    char **commands = easymake_parse_commands(tree->values[0], targets);
 
-    json_delete(value);
+    json_delete(tree);
 
     if(commands[0] == NULL)
     {
-        free(commands[0]);
         free(commands);
 
         printf("easymake: error: no target specified\n");
