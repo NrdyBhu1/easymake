@@ -5,8 +5,7 @@
 	"include_dirs": "-Iinclude",
 
 	"#default": "debug",
-
-	"test": "echo test \"test escape code\" test",
+	
 	"debug": "#(cc) -o #(out) #(src) #(include_dirs) -g -Og",
 	"release": "#(cc) -o #(out) #(src) #(include_dirs) -s -Os"
 }

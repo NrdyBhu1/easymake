@@ -504,10 +504,6 @@ int easymake_build(char *file, char **targets, int verbose)
 
     free(contents);
 
-    printf("VALUES: %d\n", tree->value_count);
-    printf("%d\n", tree->values[0]->type);
-    printf("%d\n", tree->values[0]->value_count);
-
     if(tree->type != JSON_TYPE_OBJECT || tree->value_count == 0)
     {
         json_delete(tree);

@@ -150,16 +150,12 @@ static struct json_value *json_parse(char *json)
                     case '\'':
                     case '\"':
                     {
-                        printf("Switching state to: PARSING_KEY\n");
-
                         state = PARSING_KEY;
                         break;
                     }
                     case '{':
                     case '[':
                     {
-                        printf("Switching state to: CHECKING_TYPE\n");
-
                         i--;
                         state = CHECKING_TYPE;
 
@@ -168,8 +164,6 @@ static struct json_value *json_parse(char *json)
                     case '}':
                     case ']':
                     {
-                        printf("Stepping backwards...\n");
-
                         if(value_count > 1)
                         {
                             values = (struct json_value **)realloc(values, sizeof(struct json_value *) * (value_count - 1));
@@ -194,11 +188,8 @@ static struct json_value *json_parse(char *json)
                     }
                     default:
                     {
-                        printf("KEY: %c\n", c);
-
                         if(c == '\\')
                         {
-                            printf("Found escape code: %c\n", json[i + 1]);
                             if(json[i + 1] == 'n')
                             {
                                 c = '\n';
@@ -249,8 +240,6 @@ static struct json_value *json_parse(char *json)
                         else
                             value->key = NULL;
 
-                        printf("STRING: %s\n", value->key);
-
                         value->string_value = NULL;
                         value->value_count = 0;
                         value->values = NULL;
@@ -288,8 +277,6 @@ static struct json_value *json_parse(char *json)
                         }
                         else
                             value->key = NULL;
-
-                        printf("OBJECT/ARRAY (%d): %s\n", value->type, value->key);
 
                         value->string_value = NULL;
                         value->value_count = 0;
@@ -334,8 +321,6 @@ static struct json_value *json_parse(char *json)
                         else
                             value->key = NULL;
 
-                        printf("NO_VALUE: %s\n", value->key);
-
                         value->string_value = NULL;
                         value->value_count = 0;
                         value->values = NULL;
@@ -366,7 +351,7 @@ static struct json_value *json_parse(char *json)
                     {
                         if(storage_count > 1)
                         {
-                            values[value_count - 1]->string_value = strdup(storage);
+                            values[value_count - 1]->values[values[value_count - 1]->value_count - 1]->string_value = strdup(storage);
 
                             storage = (char *)realloc(storage, sizeof(char));
                             storage_count = 1;
@@ -374,16 +359,12 @@ static struct json_value *json_parse(char *json)
                             storage[0] = 0;
                         }
 
-                        printf("STRING_VALUE: %s\n", values[value_count-1]->string_value);
-
                         state = IDLE;
 
                         break;
                     }
                     default:
                     {
-                        printf("STORING %c\n", c);
-
                         if(c == '\\')
                         {
                             if(json[i + 1] == 'n')
@@ -412,8 +393,6 @@ static struct json_value *json_parse(char *json)
                 break;
             }
         }
-
-        printf("STORAGE: %s\n  -  VALUE_COUNT: %d\n", storage, value_count);
     }
 
     free(storage);
