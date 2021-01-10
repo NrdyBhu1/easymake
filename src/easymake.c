@@ -48,8 +48,7 @@ char *easymake_read_file(char *file_path)
 {
     FILE *file = fopen(file_path, "r");
 
-    if(file == NULL)
-        return NULL;
+    if(file == NULL) return NULL;
 
     int count = 1;
     char *contents = (char *)malloc(sizeof(char));
@@ -95,6 +94,7 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
             if(c == '#')
             {
                 char c2 = str[j + 1];
+
                 if(c2 != '\0')
                 {
                     if(c2 == '(')
@@ -103,6 +103,7 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
                         k = 1;
                     }
                 }
+
                 continue;
             }
 
@@ -128,8 +129,7 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
             {
                 for(l = 0; storage[l] != '\0'; l++)
                 {
-                    if(storage[l] == '#')
-                        storage = easymake_format_string(storage, variable_count, variables);
+                    if(storage[l] == '#') storage = easymake_format_string(storage, variable_count, variables);
                 }
 
                 for(l = 0; l < variable_count; l++)
@@ -410,8 +410,7 @@ char **easymake_parse_commands(struct json_value *value, char **user_targets)
             index_count--;
         }
 
-        if(value_count == 0)
-            break;
+        if(value_count == 0) break;
     }
 
     int i;
@@ -529,16 +528,11 @@ int easymake_build(char *file, char **targets, int verbose)
     for(i = 0; commands[i] != NULL; i++)
     {
         if(system(commands[i]) == 0)
-        {
-            if(verbose)
-                printf("%s\n", commands[i]);
-        }
-        else
-            printf("easymake: error: failed to execute \'%s\'\n", commands[i]);
+            if(verbose) printf("%s\n", commands[i]);
+        else  printf("easymake: error: failed to execute \'%s\'\n", commands[i]);
     }
 
-    for(; i >= 0; i--)
-        free(commands[i]);
+    for(; i >= 0; i--) free(commands[i]);
 
     free(commands);
 
