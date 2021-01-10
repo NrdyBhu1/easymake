@@ -527,11 +527,8 @@ int easymake_build(char *file, char **targets, int verbose)
     int i;
     for(i = 0; commands[i] != NULL; i++)
     {
-        if(system(commands[i]) == 0)
-        {
-            if(verbose) printf("%s\n", commands[i]);
-        }
-        else  printf("easymake: error: failed to execute \'%s\'\n", commands[i]);
+        if(verbose) printf("%s\n", commands[i]);
+        if(system(commands[i]) != 0) printf("easymake: error: failed to execute \'%s\'\n", commands[i]);
     }
 
     for(; i >= 0; i--) free(commands[i]);
