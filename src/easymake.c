@@ -524,10 +524,13 @@ int easymake_build(char *file, char **targets, int verbose)
         return -3;
     }
 
+    int count;
+    for(count = 0; commands[count] != NULL; count++);
+
     int i;
     for(i = 0; commands[i] != NULL; i++)
     {
-        if(verbose) printf("%s\n", commands[i]);
+        printf("[%d/%d] %s\n", i + 1, count, commands[i]);
         if(system(commands[i]) != 0) printf("easymake: error: failed to execute \'%s\'\n", commands[i]);
     }
 
@@ -541,7 +544,7 @@ int easymake_build(char *file, char **targets, int verbose)
 int main(int argc, char *argv[])
 {
     int target_count = 0, verbose = 0;
-    char *file = "Build", *targets[argc];
+    char *file = "build.ezmk", *targets[argc];
 
     if(argc > 1)
     {

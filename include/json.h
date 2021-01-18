@@ -25,9 +25,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-/**
- * Json value types as enum.
- */
+/*---------------------------------------------------------------------------*/
+/*                              Data Structures                              */
+/*---------------------------------------------------------------------------*/
+
 enum json_value_type
 {
     JSON_TYPE_NOVALUE, /* 0 */
@@ -36,10 +37,6 @@ enum json_value_type
     JSON_TYPE_ARRAY    /* 3 */
 };
 
-/**
- * Represents a json value, which can be any
- * json type and store any type of value(s).
- */
 struct json_value
 {
     int type, value_count;
@@ -47,32 +44,25 @@ struct json_value
     struct json_value **values;
 };
 
+/*---------------------------------------------------------------------------------*/
+/*                              Function Declarations                              */
+/*---------------------------------------------------------------------------------*/
+
 /**
- * Takes in a json string, and converts it into
+ * Takes in a json string and returns
  * a json tree.
  */
-static struct json_value *json_parse(char *json);
+static struct json_value *json_parse(char *buffer);
 
 /**
- * A self-branching function to generate a json
- * string from a json tree.
- */
-static void json_generate(char **json, int index, struct json_value *value);
-
-/**
- * A function that simplifies the use of json_generate.
- */
-static char *json_build(struct json_value *value);
-
-/**
- * A function to cleanup and free all memory used by
+ * Cleans up and frees all memory used by
  * a json tree.
  */
 static void json_delete(struct json_value *value);
 
-/*----------------------------------------------------------------------------*/
-/*                          Function Implementations                          */
-/*----------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------*/
+/*                              Function Implementations                              */
+/*------------------------------------------------------------------------------------*/
 
 enum parser_state
 {
@@ -82,7 +72,7 @@ enum parser_state
     PARSING_STRING,  /* 3 */
 };
 
-static struct json_value *json_parse(char *json)
+static struct json_value *json_parse(char *buffer)
 {
     struct json_value *container = (struct json_value *)malloc(sizeof(struct json_value));
 
@@ -106,9 +96,9 @@ static struct json_value *json_parse(char *json)
     int state = IDLE;
 
     int i;
-    for(i = 0; json[i] != 0; i++)
+    for(i = 0; buffer[i] != 0; i++)
     {
-        char c = json[i];
+        char c = buffer[i];
 
         switch(state)
         {
@@ -159,14 +149,14 @@ static struct json_value *json_parse(char *json)
                     {
                         if(c == '\\')
                         {
-                            if(json[i + 1] == 'n')
+                            if(buffer[i + 1] == 'n')
                             {
                                 c = '\n';
                                 i++;
                             }
-                            else if(json[i + 1] == '\'' || json[i + 1] == '\"')
+                            else if(buffer[i + 1] == '\'' || buffer[i + 1] == '\"')
                             {
-                                c = json[i + 1];
+                                c = buffer[i + 1];
                                 i++;
                             }
                         }
@@ -330,14 +320,14 @@ static struct json_value *json_parse(char *json)
                     {
                         if(c == '\\')
                         {
-                            if(json[i + 1] == 'n')
+                            if(buffer[i + 1] == 'n')
                             {
                                 c = '\n';
                                 i++;
                             }
-                            else if(json[i + 1] == '\'' || json[i + 1] == '\"')
+                            else if(buffer[i + 1] == '\'' || buffer[i + 1] == '\"')
                             {
-                                c = json[i + 1];
+                                c = buffer[i + 1];
                                 i++;
                             }
                         }
@@ -364,81 +354,6 @@ static struct json_value *json_parse(char *json)
     free(values);
 
     return container;
-}
-
-static void json_generate(char **json, int index, struct json_value *value)
-{
-    if(value->type == JSON_TYPE_OBJECT || value->type == JSON_TYPE_ARRAY)
-    {
-        int i;
-        for(i = 0; i < index; i++) *json = strcat(*json, "    ");
-
-        if(value->key != NULL)
-        {
-            *json = strcat(*json, "\"");
-            *json = strcat(*json, value->key);
-            *json = strcat(*json, "\": ");
-        }
-
-        if(value->type == JSON_TYPE_OBJECT) *json = strcat(*json, "{\n");
-        else if(value->type == JSON_TYPE_ARRAY) *json = strcat(*json, "[\n");
-
-        for(i = 0; i < value->value_count; i++)
-        {
-            struct json_value *arrval = value->values[i];
-
-            json_generate(json, index + 1, arrval);
-
-            if(i + 1 < value->value_count) *json = strcat(*json, ",\n");
-            else *json = strcat(*json, "\n");
-        }
-
-        for(i = 0; i < index; i++) *json = strcat(*json, "    ");
-
-        if(value->type == JSON_TYPE_OBJECT) *json = strcat(*json, "}");
-        else if(value->type == JSON_TYPE_ARRAY) *json = strcat(*json, "]");
-    }
-    else
-    {
-        if(value->type == JSON_TYPE_STRING)
-        {
-            int i;
-            for(i = 0; i < index; i++) *json = strcat(*json, "    ");
-
-            if(value->key != NULL)
-            {
-                *json = strcat(*json, "\"");
-                *json = strcat(*json, value->key);
-                *json = strcat(*json, "\": \"");
-            }
-
-            if(value->string_value != NULL) *json = strcat(*json, value->string_value);
-
-            *json = strcat(*json, "\"");
-        }
-        else if(value->type == JSON_TYPE_NOVALUE)
-        {
-            int i;
-            for(i = 0; i < index; i++) *json = strcat(*json, "    ");
-
-            if(value->key != NULL)
-            {
-                *json = strcat(*json, "\"");
-                *json = strcat(*json, value->key);
-                *json = strcat(*json, "\"");
-            }
-        }
-    }
-}
-
-static char *json_build(struct json_value *value)
-{
-    char *json = (char *)malloc(sizeof(char));
-    json[0] = '\0';
-
-    json_generate(&json, 0, value);
-
-    return json;
 }
 
 static void json_delete(struct json_value *value)
