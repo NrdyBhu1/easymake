@@ -16,6 +16,7 @@
 */
 
 #include "json.h"
+#include "thread.h"
 #include <stdio.h>
 #include <stdlib.h>
 
