@@ -2,7 +2,7 @@
 
 # easymake
 
-A simple, lightweight, easy to use alternative to GNU/Make or CMake.
+a simple, lightweight, easy to use build system
 
 https://cleanware.github.io/wiki/easymake.html
 
