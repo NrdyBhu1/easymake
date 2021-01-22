@@ -20,10 +20,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(_WIN64)
-    #define PLATFORM "win64"
-#elif defined(_WIN32)
-    #define PLATFORM "win32"
+#if defined(_WIN32)
+    #define PLATFORM "windows"
 #elif defined(__MACH__)
     #define PLATFORM "macos"
 #elif defined(__APPLE__)
@@ -40,20 +38,15 @@
     #define PLATFORM "unknown"
 #endif
 
-struct job
-{
-    int async, command_count;
-    char **commands;
-};
-
-void *run_command(void *arg);
+void *run_cmd(void *data);
 char *easymake_read_file(char *file_path);
 char *easymake_format_string(char *str, int variable_count, struct json_value **variables);
-int easymake_build(char *file, char **targets, int verbose);
+char **easymake_parse_commands(struct json_value *value, char **user_targets);
+int easymake_build(char *file, char **targets, int verbose, int thread_count);
 
-void *run_command(void *arg)
+void *run_cmd(void *data)
 {
-    char *cmd = (char *)arg;
+    char *cmd = (char *)data;
     system(cmd);
 }
 
@@ -85,8 +78,12 @@ char *easymake_read_file(char *file_path)
     return contents;
 }
 
-void easymake_format_string(char *str, int *variable_count, struct json_value ***variables)
+char *easymake_format_string(char *str, int variable_count, struct json_value **variables)
 {
+    int instanced = 0;
+
+    if(str[0] == '!') instanced = 1;
+
     int formatted_count = 1;
     char *formatted = (char *)malloc(sizeof(char));
 
@@ -166,31 +163,45 @@ void easymake_format_string(char *str, int *variable_count, struct json_value **
                         }
                         else if(variable->type == JSON_TYPE_ARRAY)
                         {
-                            int m, n;
-                            for(m = 0; m < variable->value_count; m++)
+                            if(instanced)
                             {
-                                struct json_value *arr_value = variable->values[m];
-
-                                if(arr_value->type == JSON_TYPE_NOVALUE)
+                                int m;
+                                for(m = 0; m < variable->value_count; m++)
                                 {
-                                    for(n = 0; arr_value->key[n] != 0; n++)
+                                    if(arr_value->type == JSON_TYPE_NOVALUE)
                                     {
-                                        formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
-
-                                        formatted[formatted_count - 1] = arr_value->key[n];
-                                        formatted[formatted_count] = 0;
-
-                                        formatted_count++;
+                                        
                                     }
+                                }
+                            }
+                            else
+                            {
+                                int m, n;
+                                for(m = 0; m < variable->value_count; m++)
+                                {
+                                    struct json_value *arr_value = variable->values[m];
 
-                                    if(m + 1 < variable->value_count)
+                                    if(arr_value->type == JSON_TYPE_NOVALUE)
                                     {
-                                        formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
+                                        for(n = 0; arr_value->key[n] != 0; n++)
+                                        {
+                                            formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
 
-                                        formatted[formatted_count - 1] = ' ';
-                                        formatted[formatted_count] = 0;
+                                            formatted[formatted_count - 1] = arr_value->key[n];
+                                            formatted[formatted_count] = 0;
 
-                                        formatted_count++;
+                                            formatted_count++;
+                                        }
+
+                                        if(m + 1 < variable->value_count)
+                                        {
+                                            formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
+
+                                            formatted[formatted_count - 1] = ' ';
+                                            formatted[formatted_count] = 0;
+
+                                            formatted_count++;
+                                        }
                                     }
                                 }
                             }
@@ -213,21 +224,293 @@ void easymake_format_string(char *str, int *variable_count, struct json_value **
     return formatted;
 }
 
-void easymake_parse_jobs(struct json_value *tree, int *job_count, struct job ***jobs, int *variable_count, struct json_value ***variables, char **targets)
+char **easymake_parse_commands(struct json_value *value, char **user_targets)
 {
-    int i;
-    for(i = 0; i < tree->value_count; i++)
+    int command_count = 0;
+    char **commands = NULL;
+
+    int target_count = 1;
+    char **targets = (char **)malloc(sizeof(char *));
+
+    targets[0] = strdup(PLATFORM);
+
+    if(user_targets[0] != NULL)
     {
-        struct json_value *sub_value = tree->values[i];
+        int i;
+        for(i = 0; user_targets[i] != NULL; i++)
+        {
+            targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
+            target_count++;
+
+            targets[target_count - 1] = user_targets[i];
+        }
+    }
+
+    int variable_count = 1;
+    struct json_value **variables = (struct json_value **)malloc(sizeof(struct json_value *));
+
+    variables[0] = (struct json_value *)malloc(sizeof(struct json_value));
+    variables[0]->type = JSON_TYPE_STRING;
+    variables[0]->value_count = 0;
+    variables[0]->key = strdup("os");
+    variables[0]->string_value = strdup(PLATFORM);
+    variables[0]->values = NULL;
+
+    int value_count = 1;
+    struct json_value **values = (struct json_value **)malloc(sizeof(struct json_value *));
+
+    values[0] = value;
+
+    int index_count = 1;
+    int *index = (int *)malloc(sizeof(int));
+
+    for(index[index_count - 1] = 0; index[index_count - 1] < values[value_count - 1]->value_count; index[index_count - 1]++)
+    {
+        struct json_value *sub_value = values[value_count - 1]->values[index[index_count - 1]];
 
         switch(sub_value->type)
         {
             case JSON_TYPE_STRING:
             {
-                if(sub_value
+                if(strcmp(sub_value->key, "#build") == 0)
+                {
+                    targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
+                    target_count++;
+
+                    targets[target_count - 1] = sub_value->string_value;
+
+                    break;
+                }
+
+                if(strcmp(sub_value->key, "#default") == 0)
+                {
+                    if(target_count <= 1)
+                    {
+                        targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
+                        target_count++;
+
+                        targets[target_count - 1] = sub_value->string_value;
+
+                        break;
+                    }
+                }
+
+                if(variable_count == 0)
+                {
+                    variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
+                    variable_count++;
+
+                    variables[variable_count - 1] = sub_value;
+                }
+                else
+                {
+                    int j;
+                    for(j = 0; j < variable_count; j++)
+                    {
+                        if(strcmp(sub_value->key, variables[j]->key) == 0)
+                        {
+                            variables[j] = sub_value;
+                            j = -1;
+
+                            break;
+                        }
+                    }
+
+                    if(j != -1)
+                    {
+                        variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
+                        variable_count++;
+
+                        variables[variable_count - 1] = sub_value;
+                    }
+                }
+
+                char *formatted = easymake_format_string(sub_value->string_value, variable_count, variables);
+
+                free(sub_value->string_value);
+
+                sub_value->string_value = formatted;
+
+                break;
+            }
+            case JSON_TYPE_OBJECT:
+            {
+                int j;
+                for(j = 0; j < target_count; j++)
+                {
+                    if(strcmp(sub_value->key, targets[j]) == 0)
+                    {
+                        values = (struct json_value **)realloc(values, sizeof(struct json_value *) * (value_count + 1));
+                        value_count++;
+
+                        values[value_count - 1] = sub_value;
+
+                        index = (int *)realloc(index, sizeof(int) * (index_count + 1));
+                        index_count++;
+
+                        index[index_count - 1] = -1;
+
+                        break;
+                    }
+                }
+
+                break;
+            }
+            case JSON_TYPE_ARRAY:
+            {
+                int j;
+                for(j = 0; j < sub_value->value_count; j++)
+                {
+                    struct json_value *arr_value = sub_value->values[j];
+
+                    if(arr_value->type == JSON_TYPE_NOVALUE)
+                    {
+                        char *formatted = easymake_format_string(arr_value->key, variable_count, variables);
+
+                        free(arr_value->key);
+
+                        arr_value->key = formatted;
+                    }
+                }
+
+                if(strcmp(sub_value->key, "#build") == 0)
+                {
+                    for(j = 0; j < sub_value->value_count; j++)
+                    {
+                        struct json_value *arr_value = sub_value->values[j];
+
+                        if(arr_value->type == JSON_TYPE_NOVALUE)
+                        {
+                            targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
+                            target_count++;
+
+                            targets[target_count - 1] = arr_value->key;
+                        }
+                    }
+
+                    break;
+                }
+
+                if(variable_count == 0)
+                {
+                    variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
+                    variable_count++;
+
+                    variables[variable_count - 1] = sub_value;
+                }
+                else
+                {
+                    int j;
+                    for(j = 0; j < variable_count; j++)
+                    {
+                        if(strcmp(sub_value->key, variables[j]->key) == 0)
+                        {
+                            variables[j] = sub_value;
+                            j = -1;
+
+                            break;
+                        }
+                    }
+
+                    if(j != -1)
+                    {
+                        variables = (struct json_value **)realloc(variables, sizeof(struct json_value *) * (variable_count + 1));
+                        variable_count++;
+
+                        variables[variable_count - 1] = sub_value;
+                    }
+                }
+
+                break;
+            }
+        }
+
+        if(value_count > 0 && index[index_count - 1] + 1 == values[value_count - 1]->value_count)
+        {
+            values = (struct json_value **)realloc(values, sizeof(struct json_value **) * (value_count - 1));
+            value_count--;
+
+            index = (int *)realloc(index, sizeof(int) * (index_count - 1));
+            index_count--;
+        }
+
+        if(value_count == 0) break;
+    }
+
+    int i;
+    for(i = 0; i < variable_count; i++)
+    {
+        int j;
+        for(j = 0; j < target_count; j++)
+        {
+            if(strcmp(variables[i]->key, targets[j]) == 0)
+            {
+                if(variables[i]->type == JSON_TYPE_STRING)
+                {
+                    if(command_count == 0)
+                    {
+                        commands = (char **)malloc(sizeof(char *));
+                        command_count++;
+
+                        commands[command_count - 1] = strdup(variables[i]->string_value);
+                    }
+                    else
+                    {
+                        commands = (char **)realloc(commands, sizeof(char *) * (command_count + 1));
+                        command_count++;
+
+                        commands[command_count - 1] = strdup(variables[i]->string_value);
+                    }
+                }
+                else if(variables[i]->type == JSON_TYPE_ARRAY)
+                {
+                    int k;
+                    for(k = 0; k < variables[i]->value_count; k++)
+                    {
+                        if(command_count == 0)
+                        {
+                            commands = (char **)malloc(sizeof(char *));
+                            command_count++;
+
+                            commands[command_count - 1] = strdup(variables[i]->values[k]->key);
+                        }
+                        else
+                        {
+                            commands = (char **)realloc(commands, sizeof(char *) * (command_count + 1));
+                            command_count++;
+
+                            commands[command_count - 1] = strdup(variables[i]->values[k]->key);
+                        }
+                    }
+                }
             }
         }
     }
+
+    if(command_count == 0)
+    {
+        commands = (char **)malloc(sizeof(char *));
+        command_count++;
+
+        commands[command_count - 1] = NULL;
+    }
+    else
+    {
+        commands = (char **)realloc(commands, sizeof(char *) * (command_count + 1));
+        command_count++;
+
+        commands[command_count - 1] = NULL;
+    }
+
+    free(targets[0]);
+    free(targets);
+
+    free(variables[0]->string_value);
+    free(variables[0]->key);
+    free(variables[0]);
+    free(variables);
+
+    return commands;
 }
 
 int easymake_build(char *file, char **targets, int verbose, int thread_count)
@@ -252,42 +535,52 @@ int easymake_build(char *file, char **targets, int verbose, int thread_count)
         return -2;
     }
 
-    int job_count = 0;
-    struct job **jobs = (struct job **)malloc(sizeof(struct job *));
+    char **commands = easymake_parse_commands(tree->values[0], targets);
 
-    easymake_parse_jobs(tree, &job_count, &jobs);
+    json_delete(tree);
 
-    int i, j, k;
-    for(i = 0; i < job_count; i++)
+    if(commands[0] == NULL)
     {
-        struct job *job = jobs[i];
+        free(commands);
 
-        k = 0;
-        if(job->async)
-        {
-            thread_t threads[thread_count];
+        printf("easymake: error: no target specified\n");
 
-            while(k < job->command_count)
-            {
-                for(j = 0; j < thread_count; j++)
-                {
-                    if(k >= job->command_count) break;
-
-                    threads[thread_count] = create_thread(run_command, (void *)job->commands[k]);
-                    k++;
-                }
-
-                for(j = 0; j < thread_count; j++) join_thread(threads[j]);
-            }
-        }
-        else
-        {
-            for(j = 0; j < job->command_count; j++)
-            {
-                system(job->commands[j]);
-            }
-        }
+        return -3;
     }
+
+    int count;
+    for(count = 0; commands[count] != NULL; count++);
+
+    int thread_index = 0;
+    thread_t threads[thread_count];
+
+    int i, j;
+    for(i = 0; commands[i] != NULL; i++)
+    {
+        for(j = i; j < thread_count; j++)
+        {
+            char *cmd = commands[j];
+
+            if(cmd[0] == '!')
+            {
+                threads[thread_index] = create_thread(run_cmd, (void *)(cmd + 1));
+                thread_index++;
+                i++;
+            }
+            else break;
+        }
+
+        if(thread_index > 0)
+        {
+            for(j = 0; j <= thread_index; j++) join_thread(threads[j]);
+            thread_index = 0;
+        }
+        else system(commands[i]);
+    }
+
+    for(; i >= 0; i--) free(commands[i]);
+
+    free(commands);
 
     return 0;
 }
@@ -333,11 +626,12 @@ int main(int argc, char *argv[])
             {
                 verbose = 1;
             }
+
             else if(strcmp(arg, "-j") == 0 || strcmp(arg, "--jobs") == 0)
             {
                 if(i + 1 < argc)
                 {
-                    thread_count = (int)strtol(argv[i + 1]);
+                    thread_count = (int)atoi(argv[i + 1]);
                     i++;
                 }
             }
