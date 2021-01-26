@@ -1,0 +1,19 @@
+{
+	"cc": "gcc",
+	"out": "easymake",
+	"src": "src/easymake.c",
+	"include_dirs": "-Iinclude",
+
+	"#default": "debug",
+	
+	"debug": [
+		"echo Building debug on platform #(os)...",
+		"#(cc) -o #(out) #(src) #(include_dirs) -g -Og",
+		"echo Done!"
+	],
+	"release": [
+		"echo Building release on platform #(os)...",
+		"#(cc) -o #(out) #(src) #(include_dirs) -s -Os",
+		"echo Done!"
+	],
+}

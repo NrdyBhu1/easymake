@@ -16,13 +16,12 @@
 */
 
 #include "json.h"
+#include "thread.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(_WIN64)
-    #define PLATFORM "win64"
-#elif defined(_WIN32)
-    #define PLATFORM "win32"
+#if defined(_WIN32)
+    #define PLATFORM "windows"
 #elif defined(__MACH__)
     #define PLATFORM "macos"
 #elif defined(__APPLE__)
@@ -39,17 +38,23 @@
     #define PLATFORM "unknown"
 #endif
 
+void *run_cmd(void *data);
 char *easymake_read_file(char *file_path);
 char *easymake_format_string(char *str, int variable_count, struct json_value **variables);
-void easymake_parse_json(int *variable_count, struct json_value **variables, struct json_value *value);
-int easymake_build(char *file, char *target, int verbose);
+char **easymake_parse_commands(struct json_value *value, char **user_targets);
+int easymake_build(char *file, char **targets, int verbose, int thread_count);
+
+void *run_cmd(void *data)
+{
+    char *cmd = (char *)data;
+    system(cmd);
+}
 
 char *easymake_read_file(char *file_path)
 {
     FILE *file = fopen(file_path, "r");
 
-    if(file == NULL)
-        return NULL;
+    if(file == NULL) return NULL;
 
     int count = 1;
     char *contents = (char *)malloc(sizeof(char));
@@ -75,18 +80,22 @@ char *easymake_read_file(char *file_path)
 
 char *easymake_format_string(char *str, int variable_count, struct json_value **variables)
 {
+    int instanced = 0;
+
+    if(str[0] == '!') instanced = 1;
+
     int formatted_count = 1;
     char *formatted = (char *)malloc(sizeof(char));
 
-    formatted[0] = '\0';
+    formatted[0] = 0;
 
     int storage_count = 1;
     char *storage = (char *)malloc(sizeof(char));
 
-    storage[0] = '\0';
+    storage[0] = 0;
 
     int j, k = 0, l;
-    for(j = 0; str[j] != '\0'; j++)
+    for(j = 0; str[j] != 0; j++)
     {
         char c = str[j];
 
@@ -95,7 +104,8 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
             if(c == '#')
             {
                 char c2 = str[j + 1];
-                if(c2 != '\0')
+
+                if(c2 != 0)
                 {
                     if(c2 == '(')
                     {
@@ -103,13 +113,14 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
                         k = 1;
                     }
                 }
+
                 continue;
             }
 
             formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
 
             formatted[formatted_count - 1] = c;
-            formatted[formatted_count] = '\0';
+            formatted[formatted_count] = 0;
 
             formatted_count++;
         }
@@ -120,16 +131,15 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
                 storage = (char *)realloc(storage, sizeof(char) * (storage_count + 1));
 
                 storage[storage_count - 1] = c;
-                storage[storage_count] = '\0';
+                storage[storage_count] = 0;
 
                 storage_count++;
             }
             else
             {
-                for(l = 0; storage[l] != '\0'; l++)
+                for(l = 0; storage[l] != 0; l++)
                 {
-                    if(storage[l] == '#')
-                        storage = easymake_format_string(storage, variable_count, variables);
+                    if(storage[l] == '#') storage = easymake_format_string(storage, variable_count, variables);
                 }
 
                 for(l = 0; l < variable_count; l++)
@@ -141,43 +151,57 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
                         if(variable->type == JSON_TYPE_STRING)
                         {
                             int m;
-                            for(m = 0; variable->string_value[m] != '\0'; m++)
+                            for(m = 0; variable->string_value[m] != 0; m++)
                             {
                                 formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
 
                                 formatted[formatted_count - 1] = variable->string_value[m];
-                                formatted[formatted_count] = '\0';
+                                formatted[formatted_count] = 0;
 
                                 formatted_count++;
                             }
                         }
                         else if(variable->type == JSON_TYPE_ARRAY)
                         {
-                            int m, n;
-                            for(m = 0; m < variable->value_count; m++)
+                            if(instanced)
                             {
-                                struct json_value *arr_value = variable->values[m];
-
-                                if(arr_value->type == JSON_TYPE_NOVALUE)
+                                int m;
+                                for(m = 0; m < variable->value_count; m++)
                                 {
-                                    for(n = 0; arr_value->key[n] != '\0'; n++)
+                                    if(arr_value->type == JSON_TYPE_NOVALUE)
                                     {
-                                        formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
-
-                                        formatted[formatted_count - 1] = arr_value->key[n];
-                                        formatted[formatted_count] = '\0';
-
-                                        formatted_count++;
+                                        
                                     }
+                                }
+                            }
+                            else
+                            {
+                                int m, n;
+                                for(m = 0; m < variable->value_count; m++)
+                                {
+                                    struct json_value *arr_value = variable->values[m];
 
-                                    if(m + 1 < variable->value_count)
+                                    if(arr_value->type == JSON_TYPE_NOVALUE)
                                     {
-                                        formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
+                                        for(n = 0; arr_value->key[n] != 0; n++)
+                                        {
+                                            formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
 
-                                        formatted[formatted_count - 1] = ' ';
-                                        formatted[formatted_count] = '\0';
+                                            formatted[formatted_count - 1] = arr_value->key[n];
+                                            formatted[formatted_count] = 0;
 
-                                        formatted_count++;
+                                            formatted_count++;
+                                        }
+
+                                        if(m + 1 < variable->value_count)
+                                        {
+                                            formatted = (char *)realloc(formatted, sizeof(char) * (formatted_count + 1));
+
+                                            formatted[formatted_count - 1] = ' ';
+                                            formatted[formatted_count] = 0;
+
+                                            formatted_count++;
+                                        }
                                     }
                                 }
                             }
@@ -188,17 +212,19 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
                 storage = (char *)realloc(storage, sizeof(char));
                 storage_count = 1;
 
-                storage[storage_count - 1] = '\0';
+                storage[storage_count - 1] = 0;
 
                 k = 0;
             }
         }
     }
 
+    free(storage);
+
     return formatted;
 }
 
-char **easymake_parse_commands(struct json_value *value, char *target)
+char **easymake_parse_commands(struct json_value *value, char **user_targets)
 {
     int command_count = 0;
     char **commands = NULL;
@@ -208,12 +234,16 @@ char **easymake_parse_commands(struct json_value *value, char *target)
 
     targets[0] = strdup(PLATFORM);
 
-    if(target != NULL)
+    if(user_targets[0] != NULL)
     {
-        targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
-        target_count++;
+        int i;
+        for(i = 0; user_targets[i] != NULL; i++)
+        {
+            targets = (char **)realloc(targets, sizeof(char *) * (target_count + 1));
+            target_count++;
 
-        targets[target_count - 1] = target;
+            targets[target_count - 1] = user_targets[i];
+        }
     }
 
     int variable_count = 1;
@@ -404,8 +434,7 @@ char **easymake_parse_commands(struct json_value *value, char *target)
             index_count--;
         }
 
-        if(value_count == 0)
-            break;
+        if(value_count == 0) break;
     }
 
     int i;
@@ -473,10 +502,18 @@ char **easymake_parse_commands(struct json_value *value, char *target)
         commands[command_count - 1] = NULL;
     }
 
+    free(targets[0]);
+    free(targets);
+
+    free(variables[0]->string_value);
+    free(variables[0]->key);
+    free(variables[0]);
+    free(variables);
+
     return commands;
 }
 
-int easymake_build(char *file, char *target, int verbose)
+int easymake_build(char *file, char **targets, int verbose, int thread_count)
 {
     char *contents = easymake_read_file(file);
 
@@ -486,25 +523,24 @@ int easymake_build(char *file, char *target, int verbose)
         return -1;
     }
 
-    struct json_value *value = json_parse(contents);
+    struct json_value *tree = json_parse(contents);
 
     free(contents);
 
-    if(value->type != JSON_TYPE_OBJECT || value->value_count == 0)
+    if(tree->type != JSON_TYPE_OBJECT || tree->value_count == 0)
     {
-        json_delete(value);
+        json_delete(tree);
 
         printf("easymake: error: invalid buildfile\n");
         return -2;
     }
 
-    char **commands = easymake_parse_commands(value->values[0], target);
+    char **commands = easymake_parse_commands(tree->values[0], targets);
 
-    json_delete(value);
+    json_delete(tree);
 
     if(commands[0] == NULL)
     {
-        free(commands[0]);
         free(commands);
 
         printf("easymake: error: no target specified\n");
@@ -512,20 +548,37 @@ int easymake_build(char *file, char *target, int verbose)
         return -3;
     }
 
-    int i;
+    int count;
+    for(count = 0; commands[count] != NULL; count++);
+
+    int thread_index = 0;
+    thread_t threads[thread_count];
+
+    int i, j;
     for(i = 0; commands[i] != NULL; i++)
     {
-        if(system(commands[i]) == 0)
+        for(j = i; j < thread_count; j++)
         {
-            if(verbose)
-                printf("%s\n", commands[i]);
+            char *cmd = commands[j];
+
+            if(cmd[0] == '!')
+            {
+                threads[thread_index] = create_thread(run_cmd, (void *)(cmd + 1));
+                thread_index++;
+                i++;
+            }
+            else break;
         }
-        else
-            printf("easymake: error: failed to execute \'%s\'\n", commands[i]);
+
+        if(thread_index > 0)
+        {
+            for(j = 0; j <= thread_index; j++) join_thread(threads[j]);
+            thread_index = 0;
+        }
+        else system(commands[i]);
     }
 
-    for(; i >= 0; i--)
-        free(commands[i]);
+    for(; i >= 0; i--) free(commands[i]);
 
     free(commands);
 
@@ -534,8 +587,8 @@ int easymake_build(char *file, char *target, int verbose)
 
 int main(int argc, char *argv[])
 {
-    char *file = "Build", *target = NULL;
-    int verbose = 0;
+    int target_count = 0, verbose = 0, thread_count = 1;
+    char *file = "build.ezmk", *targets[argc];
 
     if(argc > 1)
     {
@@ -551,12 +604,13 @@ int main(int argc, char *argv[])
             }
             else if(strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
             {
-                printf("Usage: easymake [target] options...\nOptions:\n");
+                printf("Usage: easymake [options] targets...\nOptions:\n");
 
                 printf(" -v / --version      -     Display easymake version information.\n");
                 printf(" -h / --help         -     Display this help page.\n");
                 printf(" -f / --file         -     Specify build file.\n");
                 printf(" -d / --debug        -     Enable verbose output.\n");
+                printf(" -j / --jobs         -     Specify thread count.\n");
 
                 return 0;
             }
@@ -572,10 +626,24 @@ int main(int argc, char *argv[])
             {
                 verbose = 1;
             }
+
+            else if(strcmp(arg, "-j") == 0 || strcmp(arg, "--jobs") == 0)
+            {
+                if(i + 1 < argc)
+                {
+                    thread_count = (int)atoi(argv[i + 1]);
+                    i++;
+                }
+            }
             else
-                target = argv[i];
+            {
+                targets[target_count] = argv[i];
+                target_count++;
+            }
         }
     }
 
-    return easymake_build(file, target, verbose);
+    targets[target_count] = NULL;
+
+    return easymake_build(file, targets, verbose, thread_count);
 }
