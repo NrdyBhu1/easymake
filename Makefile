@@ -1,5 +1,9 @@
+# uncomment on linux and comment the other thing
+# libs = -lpthread
+libs = 
+
 build:
-	gcc src/*.c -Iinclude -o easymake -s -Os
+	gcc src/*.c -Iinclude -Iinclude/cutils -o easymake -s -Os $(libs)
 
 install:
 	echo Installing easymake to /usr/local/bin/

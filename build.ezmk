@@ -2,10 +2,11 @@
 	"cc": "gcc",
 	"out": "easymake",
 	"src": "src/easymake.c",
-	"include_dirs": "-Iinclude",
+	"include_dirs": "-Iinclude -Iinclude/cutils",
 
 	"#default": "debug",
 	
+	// on linux add -lpthread to end of command line
 	"debug": [
 		"echo Building debug on platform #(os)...",
 		"#(cc) -o #(out) #(src) #(include_dirs) -g -Og",
