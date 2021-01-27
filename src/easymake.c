@@ -15,8 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "parser/json/json.h"
-#include "thread/thread.h"
+#include "cutils/parser/json/json.h"
+#include "cutils/thread/thread.h"
 #include <stdio.h>
 #include <stdlib.h>
 
