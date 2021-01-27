@@ -1,4 +1,4 @@
-![C/C++ CI](https://github.com/Cleanware/easymake/workflows/C/C++%20CI/badge.svg?branch=main)
+![C/C++ CI](https://github.com/Fossbay/easymake/workflows/C/C++%20CI/badge.svg?branch=main)
 
 # easymake
 
@@ -24,8 +24,8 @@ Download the latest version from the releases tab, or build from source (check C
 
 ## Credits
 
-Thanks to everyone in the Cleanware organization, and everyone who contributed.
+Thanks to everyone in the Fossbay organization, and everyone who contributed.
 
 ## License
 
-[GPL v3](https://github.com/Cleanware/easymake/blob/main/LICENSE)
+[GPL v3](https://github.com/Fossbay/easymake/blob/main/LICENSE)
