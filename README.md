@@ -2,7 +2,7 @@
 
 # easymake
 
-a simple, lightweight, easy to use build system
+A simple, lightweight, easy to use build system.
 
 ## Installation
 
