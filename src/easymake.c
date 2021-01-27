@@ -15,8 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "json.h"
-#include "thread.h"
+#include "parser/json/json.h"
+#include "thread/thread.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -165,14 +165,15 @@ char *easymake_format_string(char *str, int variable_count, struct json_value **
                         {
                             if(instanced)
                             {
-                                int m;
+                                /* not implemented and it causes build error on top of that */
+                                /*int m;
                                 for(m = 0; m < variable->value_count; m++)
                                 {
                                     if(arr_value->type == JSON_TYPE_NOVALUE)
                                     {
                                         
                                     }
-                                }
+                                }*/
                             }
                             else
                             {

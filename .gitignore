@@ -3,3 +3,5 @@ easymake.exe
 easymake.obj
 *.sublime-*
 *tags
+*.code-*
+*.out
