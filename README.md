@@ -4,11 +4,11 @@
 
 Simple, lightweight, FOSS alternative to GNU Make or CMake
 
-https://github.com/Fossbay/easymake/wiki
+[Wiki](https://github.com/Fossbay/easymake/wiki)
 
 ## Installation
 
-Download the latest version from the releases tab, or build from source (check COMPILING_EASYMAKE file).
+Download the latest version from the releases tab, or build from source (check [COMPILING_EASYMAKE](https://github.com/Fossbay/easymake/blob/main/COMPILING_EASYMAKE.md)).
 
 ## Usage
 
