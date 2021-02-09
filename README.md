@@ -12,12 +12,12 @@ Download the latest version from the releases tab, or build from source (check [
 
 ## Usage
 
-`$ easymake ... options ... <target>`
+`$ easymake [options] <targets>`
 
 ## Contributing
 
 1. Fork the project
-2. Make your changes
+2. Make your changes (Make sure to follow the same code style)
 3. Remove trailing whitespace (regex `[^\S\r\n]+$`) in files that you modified
 2. Create your feature branch: `git checkout -b my-new-feature`
 3. Commit your changes: `git commit -am 'Add some feature'`
